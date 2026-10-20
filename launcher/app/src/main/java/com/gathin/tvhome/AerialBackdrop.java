@@ -34,6 +34,55 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     private boolean resumed;
     private boolean dimmed;
 
+    private static final String PREFS = "aerial_backdrop", CHOSEN = "file", POSITION = "position";
+
+    /**
+     * The aerials on the TV, as {file, title}: the titles from aerials.json next to the videos (tools put it
+     * there with them), then any other .mov or .mp4 in the folder under its file name. For the Background menu.
+     */
+    static java.util.List<String[]> catalog(Context context) {
+        java.util.List<String[]> out = new java.util.ArrayList<>();
+        File dir = context.getExternalFilesDir("aerials");
+        if (dir == null) return out;
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        File json = new File(dir, "aerials.json");
+        if (json.isFile()) {
+            try {
+                String text = new String(java.nio.file.Files.readAllBytes(json.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+                if (text.startsWith("﻿")) text = text.substring(1);   // written by PowerShell, with a BOM
+                org.json.JSONArray a = new org.json.JSONArray(text);
+                for (int i = 0; i < a.length(); i++) {
+                    org.json.JSONObject o = a.getJSONObject(i);
+                    String f = o.optString("file");
+                    if (f.isEmpty() || !new File(dir, f).canRead() || !seen.add(f)) continue;
+                    out.add(new String[]{f, o.optString("title", f)});
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "cannot read aerials.json", e);
+            }
+        }
+        File[] files = dir.listFiles((d, n) -> n.endsWith(".mov") || n.endsWith(".mp4"));
+        if (files != null) {
+            java.util.Arrays.sort(files);
+            for (File f : files) {
+                if (seen.add(f.getName())) out.add(new String[]{f.getName(), f.getName().replaceAll("\\.\\w+$", "").replace('_', ' ')});
+            }
+        }
+        return out;
+    }
+
+    /** The aerial picked in the Background menu while it is still on the TV, else the configured one. */
+    static String chosen(Context context, String configured) {
+        String f = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CHOSEN, null);
+        File dir = context.getExternalFilesDir("aerials");
+        return f != null && dir != null && new File(dir, f).canRead() ? f : configured;
+    }
+
+    /** Remembers the Background menu's pick; the new flight starts from its beginning. */
+    static void choose(Context context, String file) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(CHOSEN, file).remove(POSITION).apply();
+    }
+
     /** Null when the configured aerial is not on the TV: Home then keeps its wallpaper or plain colour. */
     static AerialBackdrop attach(Context context, FrameLayout root, int index, String fileName, int coverColor) {
         if (fileName == null || fileName.isEmpty()) return null;
@@ -45,7 +94,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
 
     private AerialBackdrop(Context context, FrameLayout root, int index, File file, int coverColor) {
         this.file = file;
-        prefs = context.getSharedPreferences("aerial_backdrop", Context.MODE_PRIVATE);
+        prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         FrameLayout.LayoutParams full = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
 

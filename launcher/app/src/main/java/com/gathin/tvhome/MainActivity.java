@@ -306,8 +306,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
         sky = findViewById(R.id.sky);
         // Above the wallpaper (it stays as the picture when the video is missing), below everything else.
+        // The Background menu's pick, else config.xml's aerial_backdrop.
         aerial = AerialBackdrop.attach(this, root, root.indexOfChild(sky),
-                getString(R.string.aerial_backdrop), cfg.backgroundColor);
+                AerialBackdrop.chosen(this, getString(R.string.aerial_backdrop)), cfg.backgroundColor);
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);
         navSound = new NavSound(this);
@@ -2359,6 +2360,39 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         rows.getChildAt(0).requestFocus();
     }
 
+    /**
+     * Settings menu, Background: every aerial on the TV, the one playing marked. Picking one keeps it (AerialBackdrop.choose)
+     * and rebuilds Home, which starts the new flight.
+     */
+    private void showBackgroundMenu() {
+        java.util.List<String[]> aerials = AerialBackdrop.catalog(this);
+        if (aerials.isEmpty()) return;
+        String current = AerialBackdrop.chosen(this, getString(R.string.aerial_backdrop));
+        View anchor = findViewById(R.id.btnSettings);
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (240 * density));
+        View focus = null;
+        for (String[] a : aerials) {
+            final String file = a[0];
+            View row = addSettingsMenuRow(rows, popup, a[1], () -> {
+                if (file.equals(current)) return;
+                AerialBackdrop.choose(this, file);
+                recreate();
+            });
+            if (file.equals(current)) {
+                TextView status = row.findViewById(R.id.status);
+                status.setText(R.string.background_current);
+                status.setVisibility(View.VISIBLE);
+                focus = row;
+            }
+        }
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (240 * density), panel.getMeasuredWidth()));
+        dropIn(popup, panel, anchor, Gravity.END);
+        (focus != null ? focus : rows.getChildAt(0)).requestFocus();
+    }
+
     /** OK on the clock: a small glass panel under it, in the top-right corner, with the time to the second. */
     private void showClockPanel(View anchor) {
         View panel = getLayoutInflater().inflate(R.layout.popup_clock, root, false);
@@ -2454,6 +2488,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
+        if (aerial != null || !AerialBackdrop.catalog(this).isEmpty()) addSettingsMenuRow(rows, popup, R.string.background, this::showBackgroundMenu);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
         // Hebrew puts Settings at the left of the header: grow the menu inward from it.
@@ -2463,6 +2498,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, int title, Runnable action) {
+        addSettingsMenuRow(rows, popup, getString(title), action);
+    }
+
+    /** The same with a title that is not a string resource (an aerial's name); returns the row. */
+    private View addSettingsMenuRow(LinearLayout rows, PopupWindow popup, CharSequence title, Runnable action) {
         View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
         row.findViewById(R.id.icon).setVisibility(View.GONE);
         row.findViewById(R.id.dot).setVisibility(View.GONE);
@@ -2489,6 +2529,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return true;
         });
         rows.addView(row);
+        return row;
     }
 
     /**

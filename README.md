@@ -30,7 +30,7 @@ and restore steps below are unchanged; the launcher is restyled to look and move
 
 | Home | Down into the apps | The top-right buttons |
 |---|---|---|
-| ![Home: the glass dock of six apps, round buttons and the clock in the top-right](docs/fork/home.png) | ![Down from the dock: it slides to the top with every row of apps under it](docs/fork/apps.png) | ![A round glass button focused: white, lifted](docs/fork/buttons.png) |
+| ![Home: the glass dock of six apps, round buttons and the clock in the top-right](docs/fork/home.jpg) | ![Down from the dock: it slides to the top with every row of apps under it](docs/fork/apps.jpg) | ![A round glass button focused: white, lifted](docs/fork/buttons.jpg) |
 
 - **Liquid Glass controls.** Round glass buttons in the top-right corner (sounds, Customize, Inputs,
   Settings) and the time with AM/PM in a glass capsule. Select the clock for a larger panel with seconds and
@@ -41,6 +41,8 @@ and restore steps below are unchanged; the launcher is restyled to look and move
 - **Dock and grid.** Six apps a row, a wider glass dock with an even margin all round, slightly rounder
   icons. Only the focused app shows its name. Down from the dock slides it to the top of the screen with
   the app rows under it, and the top buttons scroll away.
+- **Background.** Hold OK on the Settings button, then Background: every aerial on the TV by name, the one
+  playing marked. The pick is remembered and plays behind Home as a moving video.
 - **Sounds.** A soft tick as focus moves and a pop when an app opens (`res/raw`, recordings by the fork's
   author), with a bell button to silence them; the choice is remembered.
 - **Type.** Inter everywhere, in place of SF Pro: Inter Display for large type, Inter Text for labels
