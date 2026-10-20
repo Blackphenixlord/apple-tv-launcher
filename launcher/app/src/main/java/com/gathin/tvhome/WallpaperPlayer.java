@@ -152,7 +152,8 @@ final class WallpaperPlayer {
                 options.inDensity = scale[0];
                 options.inTargetDensity = scale[1];
             }
-            options.inPreferredConfig = Bitmap.Config.RGB_565;
+            // Full colour: RGB_565 bands soft gradients like the aurora; 8 MB at 1080p is fine on this 1.8 GB TV.
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
             return BitmapFactory.decodeFile(file.getPath(), options);
         } catch (Exception | OutOfMemoryError failure) {
             return null;

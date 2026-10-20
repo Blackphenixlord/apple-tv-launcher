@@ -23,6 +23,28 @@
 > [@gathint, 17 October 2026](https://x.com/gathint/status/2111379569030939102). The replies are where
 > most of the TV lists here came from. The repo was called tv-vibehack until the 19th; old links work.
 
+## About this fork: an Apple TV (tvOS 26) style Home
+
+This is a fork of [Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv). The debloating, install
+and restore steps below are unchanged; the launcher is restyled to look and move like the Apple TV Home screen:
+
+- **Liquid Glass controls.** Round glass buttons in the top-right corner (sounds, Customize, Inputs,
+  Settings) and the time with AM/PM in a glass capsule. Select the clock for a larger panel with seconds and
+  the date; Down or Left leaves it, as Left or Right leaves the Inputs menu.
+- **tvOS focus motion, no highlight box.** The focused icon itself scales up, lifts onto a shadow, leans
+  towards the direction you pressed and settles, with a moving highlight; the old and new icon animate at
+  the same time. The round buttons and the clock move the same way. A press past the end of a row nudges it.
+- **Dock and grid.** Six apps a row, a wider glass dock with an even margin all round, slightly rounder
+  icons. Only the focused app shows its name. Down from the dock slides it to the top of the screen with
+  the app rows under it, and the top buttons scroll away.
+- **Sounds.** A soft tick as focus moves and a pop when an app opens (`res/raw`, recordings by the fork's
+  author), with a bell button to silence them; the choice is remembered.
+- **Type.** Inter everywhere, in place of SF Pro: Inter Display for large type, Inter Text for labels
+  (`res/values/typography.xml`), tabular figures on the clocks. Inter is under the SIL Open Font License
+  (`launcher/FONT-LICENSE-INTER-OFL.txt`).
+
+Configure and install it exactly as described below.
+
 ## How it works
 
 Android TVs have the same debug bridge as Android phones. Switch on USB debugging in the TV's

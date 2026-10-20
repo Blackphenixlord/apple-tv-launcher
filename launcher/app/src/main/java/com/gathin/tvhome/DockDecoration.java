@@ -1,7 +1,6 @@
 package com.gathin.tvhome;
 
 import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.view.View;
@@ -9,23 +8,21 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-/** Draws the tvOS style lighter band behind the first (dock) row and adds a gap below it. */
+/** Draws the tvOS Liquid Glass band behind the first (dock) row and adds a gap below it. */
 public class DockDecoration extends RecyclerView.ItemDecoration {
 
     private final int dockSize;
     private final float density;
-    private final Paint band = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final LiquidGlassDrawable band;
     private final RectF rect = new RectF();
+    private final Rect bounds = new Rect();
 
-    /** @param translucent the cinematic shelf's band: the artwork and the glow show through it. */
+    /** @param translucent unused since the band became glass; kept for the cinematic shelf's call. */
     DockDecoration(int dockSize, float density, boolean translucent) {
         this.dockSize = dockSize;
         this.density = density;
-        band.setColor(translucent ? 0x8C121014 : 0xFF141416);
-        edge.setStyle(Paint.Style.STROKE);
-        edge.setStrokeWidth(density);
-        edge.setColor(translucent ? 0x26FFFFFF : 0x1FFFFFFF);
+        // Lighter than the pills: a big slab of glass over the aerial, 28dp corners like the tvOS dock.
+        band = new LiquidGlassDrawable(28f, 0x24FFFFFF);
     }
 
     @Override
@@ -60,10 +57,17 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
             }
         }
         if (!any) return;
-        float pad = 14 * density;
+        // The same margin on all four sides, so the gap above an icon matches the gap beside it. A focused end
+        // icon shifts inward as it grows (TvFocusMotion.edgeShift), so it stays inside this margin too.
+        float pad = 24 * density;
         rect.inset(-pad, -pad);
-        float radius = 26 * density;
-        c.drawRoundRect(rect, radius, radius, band);
-        c.drawRoundRect(rect, radius, radius, edge);
+        // Bounds at the origin, moved with the canvas: the band slides with every scroll frame, and
+        // onBoundsChange rebuilds the gradients, so only a size change may reset them.
+        bounds.set(0, 0, Math.round(rect.width()), Math.round(rect.height()));
+        if (!bounds.equals(band.getBounds())) band.setBounds(bounds);
+        c.save();
+        c.translate(rect.left, rect.top);
+        band.draw(c);
+        c.restore();
     }
 }
