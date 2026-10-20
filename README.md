@@ -28,6 +28,10 @@
 This is a fork of [Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv). The debloating, install
 and restore steps below are unchanged; the launcher is restyled to look and move like the Apple TV Home screen:
 
+| Home | Down into the apps | The top-right buttons |
+|---|---|---|
+| ![Home: the glass dock of six apps, round buttons and the clock in the top-right](docs/fork/home.png) | ![Down from the dock: it slides to the top with every row of apps under it](docs/fork/apps.png) | ![A round glass button focused: white, lifted](docs/fork/buttons.png) |
+
 - **Liquid Glass controls.** Round glass buttons in the top-right corner (sounds, Customize, Inputs,
   Settings) and the time with AM/PM in a glass capsule. Select the clock for a larger panel with seconds and
   the date; Down or Left leaves it, as Left or Right leaves the Inputs menu.
