@@ -85,8 +85,9 @@ Apple's aerials play behind Home as moving video. Open **Settings** and choose *
 - **Or pick one** (North America Aurora, Hawaii, New York Night, London, Korea and Japan Night, Antarctica,
   Dubai) to keep it on a loop. The choice is remembered.
 
-The menu lists whatever aerials are on the TV (`files/aerials`, with their names in `aerials.json`); `tools/aerials.py`
-puts them there (see [Install](#install), step 4).
+**Get more from the TV itself:** at the bottom of the Background menu, **Download aerials…** lists all 52 of
+Apple's aerials, each marked *On TV* or *Download*. OK downloads one straight from Apple (100 to 190 MB each, with
+its progress shown); hold OK on one to remove it. It checks there's room first and keeps 500 MB free.
 
 ## Install
 
@@ -122,12 +123,15 @@ adb shell pm disable-user --user 0 com.google.android.apps.tv.launcherx   # Goog
 
 Press Home on the remote. To undo it: `adb shell pm enable com.google.android.apps.tv.launcherx`.
 
-**4. Add the moving backgrounds (optional).** With [Python 3](https://www.python.org/downloads/):
-`python tools/aerials.py` downloads seven Apple aerials from Apple's servers and puts them on the TV (about 1 GB).
-`tools/aerials.py --list` shows the rest of Apple's set; name the ones you want.
+**4. Add the moving backgrounds.** On the TV: **Settings → Background → Download aerials…**, then pick the ones
+you like. No computer needed.
 
-Already have the original CleanYourTV launcher? It's signed with a different key: `adb uninstall com.gathin.tvhome`
-first.
+Or from the computer, several at once: with [Python 3](https://www.python.org/downloads/),
+`python tools/aerials.py` downloads a set of seven (about 1 GB) and puts them on the TV;
+`tools/aerials.py --list` shows the rest.
+
+Already have the original CleanYourTV launcher, or version 1.0 of this one? Those are signed with a different key:
+run `adb uninstall com.gathin.tvhome` first, once. From 1.1 on, every release installs over the last with `adb install -r`.
 
 ### Option B: the original way, with debloating
 
@@ -146,7 +150,7 @@ there's a one-line restore), then builds and installs the launcher.
    edit `launcher/app/src/main/res/values/config.xml`."*
 4. Answer its checklist: which apps you use, which go in the dock, whether to keep the voice assistant,
    Chromecast and updates.
-5. Add the moving backgrounds with `tools/aerials.py`, as in Option A, step 4.
+5. Add the moving backgrounds from the TV (Settings → Background → Download aerials…), as in Option A, step 4.
 
 Rather do it yourself, without an assistant? [Doing it by hand](#doing-it-by-hand) below has every command:
 the same backup and debloat, then `launcher/build-and-install.sh` builds this launcher and makes it Home.

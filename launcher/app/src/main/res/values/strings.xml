@@ -8,6 +8,17 @@
     <string name="background">Background</string>
     <string name="background_current">Playing</string>
     <string name="background_cycle">Cycle through all</string>
+    <string name="aerials_download">Download aerials…</string>
+    <string name="aerials_loading">Loading Apple\'s aerials…</string>
+    <string name="aerials_offline">Couldn\'t reach Apple. Check the TV\'s internet connection.</string>
+    <string name="aerials_on_tv">On TV</string>
+    <string name="aerials_get">Download</string>
+    <string name="aerials_percent">%d%%</string>
+    <string name="aerials_done">%s is ready in Background</string>
+    <string name="aerials_removed">%s removed</string>
+    <string name="aerials_busy">One download at a time: wait for this one to finish</string>
+    <string name="aerials_failed">Download failed. Try again.</string>
+    <string name="aerials_no_space">Not enough space: it needs %1$d MB and the TV has %2$d MB free</string>
     <string name="top_buttons">Top icons</string>
     <string name="menu_tv_settings">TV settings</string>
     <string name="sounds">Sounds</string>

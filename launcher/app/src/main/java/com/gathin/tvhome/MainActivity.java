@@ -338,7 +338,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         greeting = findViewById(R.id.greeting);
         greetingColor = greeting.getCurrentTextColor();
         btnWifi = findViewById(R.id.btnWifi);
-        // No network pill: the tvOS-style top row keeps only round icons, and Wi-Fi lives in TV settings.
+        // No network pill on this TV: Wi-Fi lives in Settings.
         btnWifi.setVisibility(View.GONE);
         shamsiDate = findViewById(R.id.shamsiDate);
         stats = findViewById(R.id.stats);
@@ -2413,6 +2413,87 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** When Settings was last held, so the release that follows is not taken as a press. */
     private long settingsHeldAt;
 
+    /**
+     * Background > Download aerials: Apple's whole set, each marked On TV or with its download progress. OK
+     * downloads one (one at a time, carrying on if the menu closes); hold OK on one that is on the TV to remove it.
+     */
+    private void showAerialStore() {
+        View anchor = findViewById(R.id.btnSettings);
+        View panel = getLayoutInflater().inflate(R.layout.popup_scroll, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (360 * density));
+        TextView loading = (TextView) storeRow(rows, getString(R.string.aerials_loading), null);
+        loading.setFocusable(true);
+        dropIn(popup, panel, anchor, Gravity.END);
+        loading.requestFocus();
+        AerialDownloads.loadCatalog(this, list -> {
+            if (!popup.isShowing()) return;
+            rows.removeAllViews();
+            if (list == null) {
+                storeRow(rows, getString(R.string.aerials_offline), null).requestFocus();
+                return;
+            }
+            for (AerialDownloads.Aerial a : list) {
+                View row = storeRow(rows, a.title, a);
+                TextView status = row.findViewById(R.id.status);
+                showStoreStatus(status, a);
+                row.setOnClickListener(v -> {
+                    if (AerialDownloads.onTv(this, a)) return;
+                    AerialDownloads.download(this, a, (pct, msg) -> {
+                        if (pct < 0) {
+                            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+                        } else if (pct > 100) {
+                            Toast.makeText(this, getString(R.string.aerials_done, a.title), Toast.LENGTH_SHORT).show();
+                        }
+                        showStoreStatus(status, a);
+                        if (pct >= 0 && pct <= 100) status.setText(getString(R.string.aerials_percent, pct));
+                    });
+                    showStoreStatus(status, a);
+                });
+                row.setOnLongClickListener(v -> {
+                    if (!AerialDownloads.onTv(this, a)) return false;
+                    AerialDownloads.remove(this, a);
+                    showStoreStatus(status, a);
+                    Toast.makeText(this, getString(R.string.aerials_removed, a.title), Toast.LENGTH_SHORT).show();
+                    return true;
+                });
+            }
+            capScroll(panel);
+            popup.update(popup.getWidth(), ViewGroup.LayoutParams.WRAP_CONTENT);
+            if (rows.getChildCount() > 0) rows.getChildAt(0).requestFocus();
+        });
+    }
+
+    /** A popup_scroll menu no taller than the space between the top icons and the dock; it scrolls past that. */
+    private void capScroll(View panel) {
+        View scroll = panel.findViewById(R.id.scroll);
+        int max = (int) (getResources().getDisplayMetrics().heightPixels * 0.55f);
+        scroll.measure(View.MeasureSpec.makeMeasureSpec((int) (360 * density), View.MeasureSpec.AT_MOST),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        if (scroll.getMeasuredHeight() <= max) return;
+        ViewGroup.LayoutParams lp = scroll.getLayoutParams();
+        lp.height = max;
+        scroll.setLayoutParams(lp);
+    }
+
+    private View storeRow(LinearLayout rows, String title, AerialDownloads.Aerial a) {
+        View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
+        row.findViewById(R.id.icon).setVisibility(View.GONE);
+        row.findViewById(R.id.dot).setVisibility(View.GONE);
+        ((TextView) row.findViewById(R.id.title)).setText(title);
+        row.findViewById(R.id.status).setVisibility(a == null ? View.GONE : View.VISIBLE);
+        rows.addView(row);
+        return a == null ? row.findViewById(R.id.title) : row;
+    }
+
+    private void showStoreStatus(TextView status, AerialDownloads.Aerial a) {
+        if (a.file.equals(AerialDownloads.downloading)) {
+            status.setText(getString(R.string.aerials_percent, AerialDownloads.downloadPercent));
+        } else {
+            status.setText(AerialDownloads.onTv(this, a) ? R.string.aerials_on_tv : R.string.aerials_get);
+        }
+    }
+
     /** The Android TV settings, with the same pop as opening an app. */
     private void openTvSettings() {
         navSound.onAppOpened();
@@ -2469,10 +2550,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     private void showBackgroundMenu() {
         java.util.List<String[]> aerials = AerialBackdrop.catalog(this);
-        if (aerials.isEmpty()) return;
         String current = AerialBackdrop.chosen(this, getString(R.string.aerial_backdrop));
         View anchor = findViewById(R.id.btnSettings);
-        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        View panel = getLayoutInflater().inflate(R.layout.popup_scroll, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (240 * density));
         View focus = null;
@@ -2504,6 +2584,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focus = row;
             }
         }
+        // Last row: more aerials from Apple, straight onto the TV.
+        addSettingsMenuRow(rows, popup, R.string.aerials_download, this::showAerialStore);
+        capScroll(panel);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (240 * density), panel.getMeasuredWidth()));
         dropIn(popup, panel, anchor, Gravity.END);
@@ -2638,7 +2721,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         addSettingsMenuRow(rows, popup, R.string.menu_tv_settings, this::openTvSettings);
         if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
-        if (aerial != null || !AerialBackdrop.catalog(this).isEmpty()) addSettingsMenuRow(rows, popup, R.string.background, this::showBackgroundMenu);
+        addSettingsMenuRow(rows, popup, R.string.background, this::showBackgroundMenu);
         addSettingsMenuRow(rows, popup, R.string.top_buttons, () -> showTopButtonsMenu(0));
         addSettingsMenuRow(rows, popup, R.string.sounds, () -> showSoundsMenu(0));
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
