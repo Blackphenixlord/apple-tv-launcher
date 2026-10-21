@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/fork/home.jpg" alt="Home: the glass dock of six apps over a Hawaii sunset aerial, round glass buttons and the clock in the top-right" width="900">
+  <img src="docs/fork/demo.gif" alt="Moving around Home: icons lift and lean as focus moves along the dock, the dock slides to the top over the app rows and back, then focus goes to the round glass icons and the clock in the top-right" width="900">
 </p>
 
 > **What this is:** a fork of [CleanYourTV](https://github.com/Gathin23/cleanyourtv), which strips the ads and
