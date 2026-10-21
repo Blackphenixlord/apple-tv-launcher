@@ -2627,8 +2627,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
         addSettingsMenuRow(rows, popup, R.string.menu_tv_settings, this::openTvSettings);
-        addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
-                new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
         if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
         if (aerial != null || !AerialBackdrop.catalog(this).isEmpty()) addSettingsMenuRow(rows, popup, R.string.background, this::showBackgroundMenu);

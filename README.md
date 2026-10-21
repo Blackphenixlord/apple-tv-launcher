@@ -63,7 +63,7 @@ each lifts and leans as it takes focus, just like the app icons.
 | Silence | Settings |
 |---|---|
 | ![The bell button showing the silenced bell with a slash](docs/fork/silenced.jpg) | ![The Settings menu: launcher settings, module cards, edit dock, reorder apps, background](docs/fork/settings-menu.jpg) |
-| **Sounds.** The bell turns all of Home's sounds off and on; silenced, it shows the bell with a slash. **Settings → Sounds** sets the navigation sound and the app open sound separately. | **Settings.** Press for the launcher's menu: TV settings, Background, Top icons, Sounds and more. Hold OK to go straight to the Android TV settings. |
+| **Sounds.** The bell turns all of Home's sounds off and on; silenced, it shows the bell with a slash. **Settings → Sounds** sets the navigation sound and the app open sound separately. | **Settings.** Press for the launcher's menu: TV settings, Edit dock, Reorder apps, Background, Top icons, Sounds and Module cards. Hold OK to go straight to the Android TV settings. |
 
 **Customize** (the arrows) rearranges the apps: OK picks one up, the arrows move it, Back places it.
 
