@@ -538,7 +538,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         btnReorder = findViewById(R.id.btnReorder);
         btnReorder.setOnClickListener(v -> toggleReorder());
-        btnReorder.setVisibility(cfg.reorderButton ? View.VISIBLE : View.GONE);
+        reorderButtonEnabled = cfg.reorderButton;
+        applyTopButtons();
         btnSettings.setOnLongClickListener(v -> {
             showSettingsMenu();
             return true;
@@ -558,7 +559,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
             int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : R.id.btnSettings;
             // The left end of the right-hand row: the bell, else Customize when shown, else Inputs or Settings.
-            int leftOfBar = btnMute != null ? R.id.btnMute
+            int leftOfBar = btnMute != null && btnMute.getVisibility() == View.VISIBLE ? R.id.btnMute
                     : btnReorder.getVisibility() == View.VISIBLE ? R.id.btnReorder : firstButton;
             int leftButton = rtlMenuBar ? R.id.btnSettings : leftOfBar;
             // The clock capsule ends the row on the right where the layout has one (not the Hebrew header).
@@ -2144,7 +2145,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             }
         }
-        btnInputs.setVisibility(any ? View.VISIBLE : View.GONE);
+        btnInputs.setVisibility(any && topShown(TOP_INPUTS) ? View.VISIBLE : View.GONE);
     }
 
     /** The Live TV app's launch intent: its leanback entry point, or the configured action if it has none. */
@@ -2366,6 +2367,48 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         rows.getChildAt(0).requestFocus();
     }
 
+    /** Settings menu, Top buttons: which of the optional round buttons show. Settings and the clock always do. */
+    private static final String TOP_PREFS = "top_buttons", TOP_INPUTS = "inputs", TOP_REORDER = "reorder", TOP_SOUND = "sound";
+    private boolean reorderButtonEnabled = true;
+
+    private boolean topShown(String key) {
+        return getSharedPreferences(TOP_PREFS, MODE_PRIVATE).getBoolean(key, true);
+    }
+
+    /** Shows or hides the optional top buttons from the saved choices (Inputs also needs an input to offer). */
+    private void applyTopButtons() {
+        View mute = findViewById(R.id.btnMute);
+        if (mute != null) mute.setVisibility(topShown(TOP_SOUND) ? View.VISIBLE : View.GONE);
+        btnReorder.setVisibility(reorderButtonEnabled && topShown(TOP_REORDER) ? View.VISIBLE : View.GONE);
+        updateInputsButton();
+    }
+
+    /** One row per optional button, marked Shown or Hidden; OK flips it and the menu stays open on that row. */
+    private void showTopButtonsMenu(int focusRow) {
+        View anchor = findViewById(R.id.btnSettings);
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (260 * density));
+        String[] keys = {TOP_INPUTS, TOP_REORDER, TOP_SOUND};
+        int[] titles = {R.string.inputs, R.string.top_button_reorder, R.string.top_button_sound};
+        for (int i = 0; i < keys.length; i++) {
+            final String key = keys[i];
+            final int row = i;
+            View r = addSettingsMenuRow(rows, popup, getString(titles[i]), () -> {
+                getSharedPreferences(TOP_PREFS, MODE_PRIVATE).edit().putBoolean(key, !topShown(key)).apply();
+                applyTopButtons();
+                showTopButtonsMenu(row);
+            });
+            TextView status = r.findViewById(R.id.status);
+            status.setText(topShown(key) ? R.string.top_button_shown : R.string.top_button_hidden);
+            status.setVisibility(View.VISIBLE);
+        }
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (260 * density), panel.getMeasuredWidth()));
+        dropIn(popup, panel, anchor, Gravity.END);
+        rows.getChildAt(Math.min(focusRow, rows.getChildCount() - 1)).requestFocus();
+    }
+
     /**
      * Settings menu, Background: every aerial on the TV, the one playing marked. Picking one keeps it (AerialBackdrop.choose)
      * and rebuilds Home, which starts the new flight.
@@ -2544,6 +2587,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
         if (aerial != null || !AerialBackdrop.catalog(this).isEmpty()) addSettingsMenuRow(rows, popup, R.string.background, this::showBackgroundMenu);
+        addSettingsMenuRow(rows, popup, R.string.top_buttons, () -> showTopButtonsMenu(0));
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
         // Hebrew puts Settings at the left of the header: grow the menu inward from it.

@@ -8,6 +8,11 @@
     <string name="background">Background</string>
     <string name="background_current">Playing</string>
     <string name="background_cycle">Cycle through all</string>
+    <string name="top_buttons">Top buttons</string>
+    <string name="top_button_reorder">Switch apps (Customize)</string>
+    <string name="top_button_sound">Sound</string>
+    <string name="top_button_shown">Shown</string>
+    <string name="top_button_hidden">Hidden</string>
     <string name="sounds_on">Home sounds on</string>
     <string name="sounds_off">Home sounds off</string>
     <string name="choose_input">Inputs</string>
