@@ -1,4 +1,4 @@
-﻿<h1 align="center">CleanYourTV Â· Apple TV Edition</h1>
+<h1 align="center">Apple TV Launcher</h1>
 
 <p align="center">
   <b>An Android TV / Google TV home screen that looks, moves and sounds like Apple TV (tvOS 26).</b><br>
@@ -26,7 +26,7 @@
 <table>
   <tr>
     <th width="50%">Original CleanYourTV</th>
-    <th width="50%">Apple TV Edition (this fork)</th>
+    <th width="50%">Apple TV Launcher (this fork)</th>
   </tr>
   <tr>
     <td><img src="docs/new-home.jpg" alt="The original launcher: greeting, large clock and text pills at the top, four apps in the dock"></td>
@@ -34,7 +34,7 @@
   </tr>
 </table>
 
-| | Original | Apple TV Edition |
+| | Original | Apple TV Launcher |
 |---|---|---|
 | **Focus** | A glass box that springs from tile to tile | No box: the icon itself lifts, leans toward the press and settles, with a moving highlight, like the tvOS focus engine |
 | **Top bar** | Greeting, large clock and date; text pills | Round Liquid Glass buttons (sound, Customize, Inputs, Settings) and a glass clock with AM/PM; the clock opens a large panel with seconds |
@@ -105,7 +105,7 @@ Everything you change (dock apps, columns, hidden apps, remote keys) lives in
 
 - **Original project:** [CleanYourTV](https://github.com/Gathin23/cleanyourtv) by Gathin. All the debloating, TV support
   and installer work is theirs; please star the original.
-- **Apple TV Edition:** [nickoliverio40](https://github.com/nickoliverio40). The launcher's look, motion and sounds; the
+- **Apple TV Launcher:** [nickoliverio40](https://github.com/nickoliverio40). The launcher's look, motion and sounds; the
   navigation tick and app-open pop in `res/raw` are the fork author's own recordings.
 - **Inter** by Rasmus Andersson, under the SIL Open Font License (`launcher/FONT-LICENSE-INTER-OFL.txt`).
 - Not affiliated with Apple. Apple TV and tvOS are trademarks of Apple Inc.; this project only borrows their look.
@@ -139,7 +139,7 @@ Claude Code with an Anthropic plan, Codex or Gemini CLI work too.
 
 | | |
 |---|---|
-| **1. On the TV** | Settings â†’ Device Preferences â†’ About â†’ press OK on **Build** seven times â†’ back â†’ Developer options â†’ **USB debugging** on. If you see a Network or ADB debugging toggle, turn that on too. Keep the TV on. |
+| **1. On the TV** | Settings → Device Preferences → About → press OK on **Build** seven times → back → Developer options → **USB debugging** on. If you see a Network or ADB debugging toggle, turn that on too. Keep the TV on. |
 | **2. On your computer** | Paste [`PROMPT.md`](PROMPT.md) into your assistant and fill in your TV model. |
 | **3. Follow along** | Accept "Allow USB debugging?" on the TV, then answer the checklist: which apps you use, which four go in the dock, whether to keep the voice assistant, Chromecast and updates. |
 
@@ -177,11 +177,11 @@ install any launcher at all; their lists say so in the header.
 
 Tested lists from contributors, one folder per model in [`examples/`](examples/):
 
-**TCL** 26 Â· **Sony** 18 Â· **Xiaomi** 16 Â· **Philips** 8 Â· **Hisense** 6 Â· **Amazon Fire TV** 3 Â·
-**Panasonic** 3 Â· **BenQ** 2 Â· **CHiQ** 2 Â· **Haier** 2 Â· **Hitachi** 2 Â· **NVIDIA Shield** 2 Â· **Skyworth** 2 Â·
-**Vu** 2 Â· AiPro2K Â· AIWA Â· Cecotec Â· Chromecast with Google TV Â· Compac Â· EKO Â· FFalcon Â· Freebox Â·
-Insignia Fire TV Â· Kalley Â· MTC Â· OnePlus Â· onn Â· Polytron Â· PRISM+ Â· RCA Â· Redmi Â· SANYO Â· Tele System Â·
-Thomson Â· Toshiba Fire TV Â· Vidda Â·
+**TCL** 26 · **Sony** 18 · **Xiaomi** 16 · **Philips** 8 · **Hisense** 6 · **Amazon Fire TV** 3 ·
+**Panasonic** 3 · **BenQ** 2 · **CHiQ** 2 · **Haier** 2 · **Hitachi** 2 · **NVIDIA Shield** 2 · **Skyworth** 2 ·
+**Vu** 2 · AiPro2K · AIWA · Cecotec · Chromecast with Google TV · Compac · EKO · FFalcon · Freebox ·
+Insignia Fire TV · Kalley · MTC · OnePlus · onn · Polytron · PRISM+ · RCA · Redmi · SANYO · Tele System ·
+Thomson · Toshiba Fire TV · Vidda ·
 BYINTEK, JMGO, Portronics, Stellamore, Wanbo and XGIMI projectors
 
 <details>
@@ -204,7 +204,7 @@ BYINTEK, JMGO, Portronics, Stellamore, Wanbo and XGIMI projectors
 | Chromecast with Google TV 4K (sabrina) | Google TV 14 |
 | Compac ATV R2 (SCBC R2, Realtek RTD285O) | Android TV 9 |
 | EKO 2K Google TV (MTC-built, tennoji, MediaTek mt5867 / T56) | Google TV 14 |
-| FFalcon (é›·é¸Ÿ) é¹¤6 PRO 65S585C Pro (China, tcl_mt5879_cn, MediaTek MT9653) | Android TV 11 |
+| FFalcon (雷鸟) 鹤6 PRO 65S585C Pro (China, tcl_mt5879_cn, MediaTek MT9653) | Android TV 11 |
 | Freebox Player POP (Free, fbx8am, Amlogic), IPTV/DVB-T box | Android TV 10 |
 | Haier Android TV DVB2K (broadway, HaierATVT56DVB) | Android TV 11 |
 | Haier H32S80EFX (MatrixTV CE, HRT56EU, deto, MediaTek), Thailand | Google TV 14 |
@@ -301,7 +301,7 @@ BYINTEK, JMGO, Portronics, Stellamore, Wanbo and XGIMI projectors
 | Xiaomi Mi TV (MiTV-MOOQ0, croods) | Android TV 10 |
 | Xiaomi Mi TV 4A (MiTV-MOOQ1) | Android TV 10 |
 | Xiaomi MiTV-AESP0 stick (aquaman, 1 GB) | Android TV 9 |
-| Xiaomi MiTV-ANSP0 (å°ç±³ç”µè§†5 Pro 65", jobs, Amlogic), China firmware 23.6.5.3226, 4 GB RAM | Android TV 9 (CN build) |
+| Xiaomi MiTV-ANSP0 (小米电视5 Pro 65", jobs, Amlogic), China firmware 23.6.5.3226, 4 GB RAM | Android TV 9 (CN build) |
 | Xiaomi MiTV-ASTP1 (maverick), China firmware 2.40.641.0514.cn, 1 GB RAM, 720p | Android TV 9 (CN build) |
 | Xiaomi MiTV-AXFR1 (rango, Amlogic, 1 GB), India | Android TV 11 |
 | Xiaomi MiTV-AXSO0 (dangal; Mi TV 4C Pro 2019 / 4A Pro) | Android TV 9 |
@@ -380,7 +380,7 @@ the install script finds `~/Android/Sdk` and the `java` on your PATH.
 - **Change the default home:** Launcher settings and the optional Default-home tile (`show_home_settings_shortcut`) open Android's home picker. Choose the original launcher to stop using CleanYourTV as Home, or CleanYourTV to return. The original launcher must be enabled. If the install script disabled it, use the restore script below first. Some TVs provide no home picker.
 - **Themes** set the same keys plus a background colour and a wallpaper from a `config.json` pushed to the TV, no rebuild. Four ship in [`themes/`](themes/), documented there.
 - **Language** follows the TV: English, German, Spanish, Catalan, French, Russian, Serbian (Latin), Polish, Czech, Portuguese, Turkish, Arabic, Hebrew, Simplified Chinese, Traditional Chinese (Taiwan), Thai, Finnish, Vietnamese, Bangla. Android 13+ can set it for the launcher alone: `tools/tv.py 'cmd locale set-app-locales com.gathin.tvhome --locales ca'`.
-  Hebrew places the menu buttons on the left and the date and clock on the right, with the greeting above the clock. The Clock screensaver right-aligns its date and time, and Hebrew dates include the month prefix ×‘ (for example, 19 ×‘××•×§×˜×•×‘×¨). Hebrew dock and app-grid rows start on the right, with matching left/right remote navigation. The Hebrew input selector places icons and labels on the right, status on the left, and aligns the dropdown with the Inputs buttonâ€™s right edge. Other languages keep their original layouts.
+  Hebrew places the menu buttons on the left and the date and clock on the right, with the greeting above the clock. The Clock screensaver right-aligns its date and time, and Hebrew dates include the month prefix ב (for example, 19 באוקטובר). Hebrew dock and app-grid rows start on the right, with matching left/right remote navigation. The Hebrew input selector places icons and labels on the right, status on the left, and aligns the dropdown with the Inputs button’s right edge. Other languages keep their original layouts.
   Russian includes the module-card approval and management screens and the VPN-off badge.
 - **Module cards** let any TV app declare its own tile (label, caption, glow). The launcher asks you once per app, Keep hidden by default, and remembers the answer for that app's signing key and card name. Hold OK on Settings and choose Module cards to change your mind. How to make one: [`docs/modules.md`](docs/modules.md); the contract: [`docs/specs/card.md`](docs/specs/card.md).
 - **Clock screensaver**: a drifting clock over the glow, so nothing burns in. Pick "Clock" in the TV's screensaver settings, or over ADB:
@@ -412,11 +412,11 @@ already disabled when the record was taken.
 Without a record (an older run, or a record you deleted) the script says so and falls back to
 enabling the whole list and resetting the scales to `1.0`, which is what it used to do.
 
-It leaves the new launcher installed (remove it from the TV's Settings â†’ Apps if you want it gone)
+It leaves the new launcher installed (remove it from the TV's Settings → Apps if you want it gone)
 and does not know about packages you disabled outside the list. To switch back later, run the
 install script again; it works out which launcher to disable even when Home has fallen back to
 Android's chooser. If the TV is unreachable, its own
-Settings â†’ Apps page can re-enable packages too.
+Settings → Apps page can re-enable packages too.
 
 ## When something goes wrong
 
@@ -431,7 +431,7 @@ three that matter most:
 
 **Is this safe? Can it brick the TV?** Nothing is flashed, rooted or deleted; packages are disabled
 in the user profile. The risk is disabling something the TV leans on, which is why lists are
-applied in small batches with a restore script ready. The TV's own Settings â†’ Apps page can
+applied in small batches with a restore script ready. The TV's own Settings → Apps page can
 re-enable packages even without the tools.
 
 **What about firmware updates?** Most lists disable the update service, so updates arrive only when
@@ -449,7 +449,7 @@ TV at their home routing to it. Never by opening the ADB port on their router. S
 same as developing an Android app. Network ADB is plaintext on port 5555, and on firmware with
 `ro.adb.secure=0` any device on the LAN gets a shell, so close it when you are done:
 
-1. On the TV: Developer options â†’ turn **USB debugging** and **Network/ADB debugging** off, and
+1. On the TV: Developer options → turn **USB debugging** and **Network/ADB debugging** off, and
    revoke the USB debugging authorisations.
 2. Reboot the TV, then confirm the port is gone from your computer: `nc -vz <tv ip> 5555` must fail.
    Without `nc` (Windows): `python tools/adb-closed.py <tv ip>` must say the port is closed.
