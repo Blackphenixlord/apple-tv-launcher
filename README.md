@@ -1,55 +1,83 @@
+<h1 align="center">CleanYourTV · Apple TV Edition</h1>
+
 <p align="center">
-  <a href="https://cleanyour.tv"><img src="https://raw.githubusercontent.com/Gathin23/cleanyourtv/main/docs/banner.png" alt="CleanYourTV. Your TV, minus the ads. Strip the bloatware from any Android TV or Google TV over Wi-Fi and replace the ad-filled home screen with a clean launcher that looks like an Apple TV. No root, no cable, nothing uninstalled, and a one-line restore." width="800"></a>
+  <b>An Android TV / Google TV home screen that looks, moves and sounds like Apple TV (tvOS 26).</b><br>
+  Liquid Glass controls, the tvOS focus engine, a six-wide dock that slides away, aerial backgrounds.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Gathin23/cleanyourtv/stargazers"><img src="https://img.shields.io/github/stars/Gathin23/cleanyourtv?style=flat&cacheSeconds=1800&color=cfffcf&labelColor=15181e" alt="Stars"></a>
-  <a href="https://github.com/Gathin23/cleanyourtv/pulls?q=is%3Amerged"><img src="https://img.shields.io/github/issues-pr-closed/Gathin23/cleanyourtv?style=flat&cacheSeconds=1800&label=merged%20PRs&color=cfffcf&labelColor=15181e" alt="Merged PRs"></a>
-  <a href="https://github.com/Gathin23/cleanyourtv/network/members"><img src="https://img.shields.io/github/forks/Gathin23/cleanyourtv?style=flat&cacheSeconds=1800&color=cfffcf&labelColor=15181e" alt="Forks"></a>
-  <a href="https://github.com/Gathin23/cleanyourtv/graphs/contributors"><img src="https://img.shields.io/github/contributors/Gathin23/cleanyourtv?style=flat&cacheSeconds=1800&color=cfffcf&labelColor=15181e" alt="Contributors"></a>
-  <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/README-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-cfffcf?style=flat&labelColor=15181e" alt="简体中文"></a>
-  <a href="https://buymeacoffee.com/gathint"><img src="https://img.shields.io/badge/support-%E2%9D%A4-ff5e8a?style=flat&labelColor=15181e" alt="Support, buy me a coffee"></a>
-  <a href="https://www.producthunt.com/products/cleanyourtv"><img src="https://img.shields.io/badge/Product%20Hunt-launching%20Oct%2021-da552f?style=flat&logo=producthunt&logoColor=white&labelColor=15181e" alt="CleanYourTV on Product Hunt"></a>
+  <a href="https://github.com/Gathin23/cleanyourtv"><img src="https://img.shields.io/badge/fork%20of-Gathin23%2Fcleanyourtv-15181e?style=flat&logo=github" alt="Fork of Gathin23/cleanyourtv"></a>
+  <img src="https://img.shields.io/badge/style-tvOS%2026-cfffcf?style=flat&labelColor=15181e" alt="tvOS 26 style">
+  <img src="https://img.shields.io/badge/platform-Android%20TV%20%7C%20Google%20TV-cfffcf?style=flat&labelColor=15181e" alt="Android TV and Google TV">
+  <img src="https://img.shields.io/badge/root-not%20needed-cfffcf?style=flat&labelColor=15181e" alt="No root">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-cfffcf?style=flat&labelColor=15181e" alt="MIT licence"></a>
 </p>
 
 <p align="center">
-  <a href="docs/PRESS.md"><img src="docs/card.jpg" alt="123 TV models · 42 brands · 19 languages · 390 KB launcher. Featured in TechCrunch, Mashable, Android Authority, XDA, FlatpanelsHD, It's FOSS, Phandroid, GIGAZINE, Xataka, WinFuture, Frandroid, Macitynet, Techaeris, TechPP, The Daily Star, detikINET and 54 more: 70 articles from 21 countries. Before: stock Google TV home with a sponsored ad. After: the Clean Your TV launcher." width="800"></a>
+  <img src="docs/fork/home.jpg" alt="Home: the glass dock of six apps over a Hawaii sunset aerial, round glass buttons and the clock in the top-right" width="900">
 </p>
 
-> Vibe coded my parents' TV this afternoon! It was showing a sponsored ad before you could even get
-> to Netflix. Gave Claude Code the model number, it found the TV on wifi, removed 25 Xiaomi packages
-> and wrote a new launcher. Looks like an Apple TV now lol.
->
-> [@gathint, 17 October 2026](https://x.com/gathint/status/2111379569030939102). The replies are where
-> most of the TV lists here came from. The repo was called tv-vibehack until the 19th; old links work.
+> **What this is:** a fork of [CleanYourTV](https://github.com/Gathin23/cleanyourtv), which strips the ads and
+> bloatware from Android TVs and replaces the home screen. The debloat, install and one-line restore are the
+> original project's, unchanged. **The launcher is rebuilt** to match Apple TV down to the motion and sound.
 
-## About this fork: an Apple TV (tvOS 26) style Home
+## Original vs this fork
 
-This is a fork of [Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv). The debloating, install
-and restore steps below are unchanged; the launcher is restyled to look and move like the Apple TV Home screen:
+<table>
+  <tr>
+    <th width="50%">Original CleanYourTV</th>
+    <th width="50%">Apple TV Edition (this fork)</th>
+  </tr>
+  <tr>
+    <td><img src="docs/new-home.jpg" alt="The original launcher: greeting, large clock and text pills at the top, four apps in the dock"></td>
+    <td><img src="docs/fork/home.jpg" alt="This fork: round glass buttons and a clock capsule in the top-right, six apps in a wider glass dock over an aerial"></td>
+  </tr>
+</table>
 
-| Home | Down into the apps | The top-right buttons |
+| | Original | Apple TV Edition |
 |---|---|---|
-| ![Home: the glass dock of six apps, round buttons and the clock in the top-right](docs/fork/home.jpg) | ![Down from the dock: it slides to the top with every row of apps under it](docs/fork/apps.jpg) | ![A round glass button focused: white, lifted](docs/fork/buttons.jpg) |
+| **Focus** | A glass box that springs from tile to tile | No box: the icon itself lifts, leans toward the press and settles, with a moving highlight, like the tvOS focus engine |
+| **Top bar** | Greeting, large clock and date; text pills | Round Liquid Glass buttons (sound, Customize, Inputs, Settings) and a glass clock with AM/PM; the clock opens a large panel with seconds |
+| **Dock** | Four apps, the focused app's name in large type above it | Six apps, an even glass margin, rounder icons; **Down slides the dock to the top** with every app row under it |
+| **Grid** | Name under each tile on focus | Larger tiles, only the focused app named, a nudge at the end of a row |
+| **Sound** | System clicks | A soft tick between icons and a pop on opening an app, with a bell button to silence them |
+| **Background** | Colour glow, wallpaper or a theme | Apple aerials playing behind Home, with a **Background menu** to pick any aerial on the TV |
+| **Type** | Outfit | Inter Display and Inter Text in place of SF Pro, tabular figures on the clocks |
 
-- **Liquid Glass controls.** Round glass buttons in the top-right corner (sounds, Customize, Inputs,
-  Settings) and the time with AM/PM in a glass capsule. Select the clock for a larger panel with seconds and
-  the date; Down or Left leaves it, as Left or Right leaves the Inputs menu.
-- **tvOS focus motion, no highlight box.** The focused icon itself scales up, lifts onto a shadow, leans
-  towards the direction you pressed and settles, with a moving highlight; the old and new icon animate at
-  the same time. The round buttons and the clock move the same way. A press past the end of a row nudges it.
-- **Dock and grid.** Six apps a row, a wider glass dock with an even margin all round, slightly rounder
-  icons. Only the focused app shows its name. Down from the dock slides it to the top of the screen with
-  the app rows under it, and the top buttons scroll away.
-- **Background.** Hold OK on the Settings button, then Background: every aerial on the TV by name, the one
-  playing marked. The pick is remembered and plays behind Home as a moving video.
-- **Sounds.** A soft tick as focus moves and a pop when an app opens (`res/raw`, recordings by the fork's
-  author), with a bell button to silence them; the choice is remembered.
-- **Type.** Inter everywhere, in place of SF Pro: Inter Display for large type, Inter Text for labels
-  (`res/values/typography.xml`), tabular figures on the clocks. Inter is under the SIL Open Font License
-  (`launcher/FONT-LICENSE-INTER-OFL.txt`).
+## Screenshots
 
-Configure and install it exactly as described below.
+| Down from the dock | A focused glass button |
+|---|---|
+| ![The dock slid to the top of the screen with all the app rows under it](docs/fork/apps.jpg) | ![The Inputs button focused: white glass, lifted](docs/fork/buttons.jpg) |
+
+## Install
+
+Setup is the same as the original's. In short: switch on USB debugging on the TV, then give
+[`PROMPT.md`](PROMPT.md) to a coding assistant on a computer on the same Wi-Fi, or follow
+[Doing it by hand](#doing-it-by-hand) to build and install the launcher yourself:
+
+```bash
+export TV_HOST=192.168.1.50                    # your TV's IP address
+TV_HOST=$TV_HOST launcher/build-and-install.sh # build the launcher and make it Home
+```
+
+Everything you change (dock apps, columns, hidden apps, remote keys) lives in
+`launcher/app/src/main/res/values/config.xml`. The full guide follows below.
+
+## Credits
+
+- **Original project:** [CleanYourTV](https://github.com/Gathin23/cleanyourtv) by Gathin. All the debloating, TV support
+  and installer work is theirs; please star the original.
+- **Apple TV Edition:** [nickoliverio40](https://github.com/nickoliverio40). The launcher's look, motion and sounds; the
+  navigation tick and app-open pop in `res/raw` are the fork author's own recordings.
+- **Inter** by Rasmus Andersson, under the SIL Open Font License (`launcher/FONT-LICENSE-INTER-OFL.txt`).
+- Not affiliated with Apple. Apple TV and tvOS are trademarks of Apple Inc.; this project only borrows their look.
+
+---
+
+# Setup guide
+
+*From the original project. Setup, supported TVs and restoring apply to this fork unchanged; "What you get" and "The launcher" describe the original design, and the table above lists what this fork does differently.*
 
 ## How it works
 
