@@ -338,7 +338,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         greeting = findViewById(R.id.greeting);
         greetingColor = greeting.getCurrentTextColor();
         btnWifi = findViewById(R.id.btnWifi);
-        // No network pill on this TV: Wi-Fi lives in Settings.
+        // No network pill: the tvOS-style top row keeps only round icons, and Wi-Fi lives in TV settings.
         btnWifi.setVisibility(View.GONE);
         shamsiDate = findViewById(R.id.shamsiDate);
         stats = findViewById(R.id.stats);

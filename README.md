@@ -6,6 +6,7 @@
 </p>
 
 <p align="center">
+  <a href="../../releases/latest"><img src="https://img.shields.io/badge/download-APK-cfffcf?style=flat&logo=android&logoColor=white&labelColor=15181e" alt="Download the APK"></a>
   <a href="https://github.com/Gathin23/cleanyourtv"><img src="https://img.shields.io/badge/fork%20of-Gathin23%2Fcleanyourtv-15181e?style=flat&logo=github" alt="Fork of Gathin23/cleanyourtv"></a>
   <img src="https://img.shields.io/badge/style-tvOS%2026-cfffcf?style=flat&labelColor=15181e" alt="tvOS 26 style">
   <img src="https://img.shields.io/badge/platform-Android%20TV%20%7C%20Google%20TV-cfffcf?style=flat&labelColor=15181e" alt="Android TV and Google TV">
@@ -84,22 +85,41 @@ Apple's aerials play behind Home as moving video. Open **Settings** and choose *
 - **Or pick one** (North America Aurora, Hawaii, New York Night, London, Korea and Japan Night, Antarctica,
   Dubai) to keep it on a loop. The choice is remembered.
 
-The menu lists whatever aerials are on the TV (`files/aerials`, with their names in `aerials.json`); the
-installer puts them there.
+The menu lists whatever aerials are on the TV (`files/aerials`, with their names in `aerials.json`); `tools/aerials.py`
+puts them there (see [Install](#install), step 4).
 
 ## Install
 
-Setup is the same as the original's. In short: switch on USB debugging on the TV, then give
-[`PROMPT.md`](PROMPT.md) to a coding assistant on a computer on the same Wi-Fi, or follow
-[Doing it by hand](#doing-it-by-hand) to build and install the launcher yourself:
+About five minutes, from any Windows, Mac or Linux computer on the same Wi-Fi as the TV.
+
+**1. Allow the computer on the TV.** Settings → Device Preferences → About → press OK on **Build** seven times.
+Then Back → Developer options → turn on **USB debugging** (and **Network debugging** if there is one). Note the
+TV's IP address under Settings → Network.
+
+**2. Install the launcher.** Get Google's [platform-tools](https://developer.android.com/tools/releases/platform-tools)
+for `adb`, download **`apple-tv-launcher.apk`** from [Releases](../../releases/latest), then run:
 
 ```bash
-export TV_HOST=192.168.1.50                    # your TV's IP address
-TV_HOST=$TV_HOST launcher/build-and-install.sh # build the launcher and make it Home
+adb connect 192.168.1.50:5555          # your TV's IP; accept "Allow USB debugging?" on the TV
+adb install -r apple-tv-launcher.apk
 ```
 
-Everything you change (dock apps, columns, hidden apps, remote keys) lives in
-`launcher/app/src/main/res/values/config.xml`. The full guide follows below.
+**3. Make it Home.** On Google TV the stock home screen has to be switched off, or Home goes back to it:
+
+```bash
+adb shell cmd package set-home-activity com.gathin.tvhome/.MainActivity
+adb shell pm disable-user --user 0 com.google.android.apps.tv.launcherx   # Google TV only
+```
+
+Press Home on the remote. To undo it: `adb shell pm enable com.google.android.apps.tv.launcherx`.
+
+**4. Add the moving backgrounds (optional).** With [Python 3](https://www.python.org/downloads/):
+`python tools/aerials.py` downloads seven Apple aerials from Apple's servers and puts them on the TV (about 1 GB).
+`tools/aerials.py --list` shows the rest of Apple's set; name the ones you want.
+
+Already have the original CleanYourTV launcher? It's signed with a different key: `adb uninstall com.gathin.tvhome`
+first. Want the ads and bloatware gone too, or to build it yourself with your own dock and hidden apps
+(`launcher/app/src/main/res/values/config.xml`)? Follow the original's full guide below.
 
 ## Credits
 
