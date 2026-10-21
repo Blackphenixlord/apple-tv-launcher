@@ -25,7 +25,8 @@ import java.io.File;
 final class AerialBackdrop implements SurfaceHolder.Callback {
     private static final String TAG = "TvHome.Aerial";
 
-    private final File file;
+    /** Not final: cycling swaps in the next aerial. */
+    private File file;
     private final View cover;
     private final View gridDim;
     private final SharedPreferences prefs;
@@ -71,29 +72,76 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         return out;
     }
 
-    /** The aerial picked in the Background menu while it is still on the TV, else the configured one. */
+    /** The Background menu's "Cycle through all": each aerial plays once, then the next, round the catalog. */
+    static final String CYCLE = "*cycle*";
+    /** While cycling: the aerial playing now, so Home picks up the rotation where it left it. */
+    private static final String CYCLE_FILE = "cycle_file";
+
+    /**
+     * The aerial picked in the Background menu while it is still on the TV, CYCLE when cycling, else the
+     * configured one.
+     */
     static String chosen(Context context, String configured) {
         String f = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CHOSEN, null);
+        if (CYCLE.equals(f)) return CYCLE;
         File dir = context.getExternalFilesDir("aerials");
         return f != null && dir != null && new File(dir, f).canRead() ? f : configured;
     }
 
-    /** Remembers the Background menu's pick; the new flight starts from its beginning. */
+    /** Remembers the Background menu's pick (a file, or CYCLE); the new flight starts from its beginning. */
     static void choose(Context context, String file) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(CHOSEN, file).remove(POSITION).apply();
     }
 
-    /** Null when the configured aerial is not on the TV: Home then keeps its wallpaper or plain colour. */
+    /**
+     * Null when the configured aerial is not on the TV: Home then keeps its wallpaper or plain colour. fileName
+     * CYCLE starts the rotation at the aerial it last reached.
+     */
     static AerialBackdrop attach(Context context, FrameLayout root, int index, String fileName, int coverColor) {
         if (fileName == null || fileName.isEmpty()) return null;
         File dir = context.getExternalFilesDir("aerials");
-        File f = dir == null ? null : new File(dir, fileName);
-        if (f == null || !f.canRead()) return null;
-        return new AerialBackdrop(context, root, index, f, coverColor);
+        if (dir == null) return null;
+        boolean cycle = CYCLE.equals(fileName);
+        if (cycle) {
+            java.util.List<String[]> all = catalog(context);
+            if (all.isEmpty()) return null;
+            String at = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CYCLE_FILE, null);
+            fileName = at != null && new File(dir, at).canRead() ? at : all.get(0)[0];
+        }
+        File f = new File(dir, fileName);
+        if (!f.canRead()) return null;
+        return new AerialBackdrop(context, root, index, f, coverColor, cycle);
     }
 
-    private AerialBackdrop(Context context, FrameLayout root, int index, File file, int coverColor) {
+    private final Context context;
+    private final boolean cycle;
+
+    /** Cycling: the aerial after the one playing, in catalog order, wrapping round. */
+    private File nextInCycle() {
+        java.util.List<String[]> all = catalog(context);
+        if (all.isEmpty()) return file;
+        int i = 0;
+        for (int k = 0; k < all.size(); k++) if (all.get(k)[0].equals(file.getName())) i = k + 1;
+        return new File(file.getParentFile(), all.get(i % all.size())[0]);
+    }
+
+    /** One aerial finished while cycling: fade to black, swap in the next, and the first frame fades it back in. */
+    private void advance() {
+        File next = nextInCycle();
+        Log.i(TAG, "cycle: " + file.getName() + " -> " + next.getName());
+        release();
+        prefs.edit().putString(CYCLE_FILE, next.getName()).remove(POSITION).apply();
+        cover.animate().cancel();
+        cover.animate().alpha(1f).setDuration(300).withEndAction(() -> {
+            file = next;
+            start();
+        }).start();
+    }
+
+    private AerialBackdrop(Context context, FrameLayout root, int index, File file, int coverColor, boolean cycle) {
         this.file = file;
+        this.context = context.getApplicationContext();
+        this.cycle = cycle;
         prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         FrameLayout.LayoutParams full = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
@@ -161,7 +209,11 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
             mp.setDataSource(file.getPath());
             mp.setDisplay(surface);
             mp.setVolume(0f, 0f);
-            mp.setLooping(true);
+            // One aerial loops; cycling plays each through once and then moves on.
+            mp.setLooping(!cycle);
+            if (cycle) mp.setOnCompletionListener(p -> {
+                if (player == p) advance();
+            });
             mp.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING);
             mp.setOnPreparedListener(p -> {
                 if (player != p) return;

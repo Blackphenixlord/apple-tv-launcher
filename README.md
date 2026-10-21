@@ -41,7 +41,7 @@
 | **Dock** | Four apps, the focused app's name in large type above it | Six apps, an even glass margin, rounder icons; **Down slides the dock to the top** with every app row under it |
 | **Grid** | Name under each tile on focus | Larger tiles, only the focused app named, a nudge at the end of a row |
 | **Sound** | System clicks | A soft tick between icons and a pop on opening an app, with a bell button to silence them |
-| **Background** | Colour glow, wallpaper or a theme | Apple aerials playing behind Home, with a **Background menu** to pick any aerial on the TV |
+| **Background** | Colour glow, wallpaper or a theme | Apple aerials playing behind Home: pick one or **cycle through them all** from the Background menu |
 | **Type** | Outfit | Inter Display and Inter Text in place of SF Pro, tabular figures on the clocks |
 
 ## Screenshots
@@ -49,6 +49,36 @@
 | Down from the dock | A focused glass button |
 |---|---|
 | ![The dock slid to the top of the screen with all the app rows under it](docs/fork/apps.jpg) | ![The Inputs button focused: white glass, lifted](docs/fork/buttons.jpg) |
+
+## The top-right controls
+
+Five Liquid Glass controls sit in the corner, the way Apple TV puts them. Press Up from the dock to reach them;
+each lifts and leans as it takes focus, just like the app icons.
+
+| Clock | Inputs |
+|---|---|
+| ![The clock opened: a glass panel with the time to the second and the date](docs/fork/clock.jpg) | ![The Inputs menu: HDMI ports by device name and Live TV](docs/fork/inputs.jpg) |
+| **Clock.** Select the time for a larger panel with seconds and the date. Down or Left closes it and moves on. | **Inputs.** Every HDMI port under its device's name (here a PlayStation 5, marked Connected) and Live TV. Left or Right leaves the menu. |
+
+| Silence | Settings |
+|---|---|
+| ![The bell button showing the silenced bell with a slash](docs/fork/silenced.jpg) | ![The Settings menu: launcher settings, module cards, edit dock, reorder apps, background](docs/fork/settings-menu.jpg) |
+| **Sounds.** The bell turns Home's navigation tick and open pop off and on; silenced, it shows the bell with a slash. | **Settings.** Press for the TV's settings (with the open pop); hold OK for the launcher's own menu. |
+
+**Customize** (the arrows) rearranges the apps: OK picks one up, the arrows move it, Back places it.
+
+## Animated backgrounds
+
+![The Background menu: Cycle through all marked Playing, then each aerial by name](docs/fork/background.jpg)
+
+Apple's aerials play behind Home as moving video. Hold OK on **Settings** and choose **Background**:
+
+- **Cycle through all.** Each aerial plays through once, then Home fades to the next, round the list.
+- **Or pick one** (North America Aurora, Hawaii, New York Night, London, Korea and Japan Night, Antarctica,
+  Dubai) to keep it on a loop. The choice is remembered.
+
+The menu lists whatever aerials are on the TV (`files/aerials`, with their names in `aerials.json`); the
+installer puts them there.
 
 ## Install
 

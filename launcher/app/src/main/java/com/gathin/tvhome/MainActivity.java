@@ -313,6 +313,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         glass = findViewById(R.id.glass);
         navSound = new NavSound(this);
         header = findViewById(R.id.header);
+        // A font of your own for the clock (files/clock_font.otf or .ttf, pushed with adb), else Inter.
+        applyClockFont(findViewById(R.id.clock), findViewById(R.id.ampm));
         if (festive) glass.setAccent(festival.accentColor());
         ambient = findViewById(R.id.ambient);
         // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
@@ -521,7 +523,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
             return true;
         });
-        btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        btnSettings.setOnClickListener(v -> {
+            navSound.onAppOpened();   // the same pop as opening an app
+            open(systemIntent(Settings.ACTION_SETTINGS));
+        });
         // The bell: Home sounds on or off, null in the Hebrew layout.
         TextView btnMute = findViewById(R.id.btnMute);
         if (btnMute != null) {
@@ -824,6 +829,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         for (int code : settingsKeycodes) {
             if (event.getKeyCode() != code) continue;
             if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
+                navSound.onAppOpened();   // the same pop as the Settings button
                 open(settingsKeyPanel ? new Intent(this, QuickSettingsActivity.class)
                         : systemIntent(Settings.ACTION_SETTINGS));
             }
@@ -2373,6 +2379,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (240 * density));
         View focus = null;
+        // First row: rotate through them all (AerialBackdrop.CYCLE), each aerial once and then the next.
+        if (aerials.size() > 1) {
+            View cycleRow = addSettingsMenuRow(rows, popup, getString(R.string.background_cycle), () -> {
+                if (AerialBackdrop.CYCLE.equals(current)) return;
+                AerialBackdrop.choose(this, AerialBackdrop.CYCLE);
+                recreate();
+            });
+            if (AerialBackdrop.CYCLE.equals(current)) {
+                TextView status = cycleRow.findViewById(R.id.status);
+                status.setText(R.string.background_current);
+                status.setVisibility(View.VISIBLE);
+                focus = cycleRow;
+            }
+        }
         for (String[] a : aerials) {
             final String file = a[0];
             View row = addSettingsMenuRow(rows, popup, a[1], () -> {
@@ -2393,9 +2413,44 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         (focus != null ? focus : rows.getChildAt(0)).requestFocus();
     }
 
+    /** The clock font file, if one is on the TV: files/clock_font.otf or files/clock_font.ttf. */
+    static final String[] CLOCK_FONT_FILES = {"clock_font.otf", "clock_font.ttf"};
+    private android.graphics.Typeface clockFont;
+    private boolean clockFontLoaded;
+
+    /**
+     * Sets the clock font on these views, or on every TextView inside them (the clock panel). Nothing in the app
+     * ships a font for this: the file is the TV owner's own, so Inter stays the clock font everywhere else.
+     */
+    private void applyClockFont(View... views) {
+        if (!clockFontLoaded) {
+            clockFontLoaded = true;
+            java.io.File dir = Config.dir(this);
+            for (String name : CLOCK_FONT_FILES) {
+                java.io.File f = dir == null ? null : new java.io.File(dir, name);
+                if (f == null || !f.isFile()) continue;
+                try {
+                    clockFont = android.graphics.Typeface.createFromFile(f);
+                } catch (RuntimeException e) {
+                    android.util.Log.w("TvHome", "cannot load " + f, e);
+                }
+                break;
+            }
+        }
+        if (clockFont == null) return;
+        for (View v : views) {
+            if (v instanceof TextView) ((TextView) v).setTypeface(clockFont);
+            else if (v instanceof ViewGroup) {
+                ViewGroup g = (ViewGroup) v;
+                for (int i = 0; i < g.getChildCount(); i++) applyClockFont(g.getChildAt(i));
+            }
+        }
+    }
+
     /** OK on the clock: a small glass panel under it, in the top-right corner, with the time to the second. */
     private void showClockPanel(View anchor) {
         View panel = getLayoutInflater().inflate(R.layout.popup_clock, root, false);
+        applyClockFont(panel);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         final PopupWindow popup = glassPopup(panel, Math.max((int) (300 * density), panel.getMeasuredWidth()));
         panel.setOnClickListener(v -> popup.dismiss());
