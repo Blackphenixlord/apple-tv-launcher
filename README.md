@@ -90,7 +90,16 @@ puts them there (see [Install](#install), step 4).
 
 ## Install
 
-About five minutes, from any Windows, Mac or Linux computer on the same Wi-Fi as the TV.
+Two ways, both from a Windows, Mac or Linux computer on the same Wi-Fi as the TV:
+
+| | Option A: download the APK | Option B: the original way |
+|---|---|---|
+| **Gets you** | The Apple TV launcher | The launcher **plus** the ads and bloatware stripped from the TV |
+| **How** | Four commands | A coding assistant does it with you, step by step |
+| **Time** | About five minutes | About fifteen minutes |
+| **Your dock and hidden apps** | Set on the TV afterwards (Settings → Edit dock) | Built in from the start |
+
+### Option A: download the APK
 
 **1. Allow the computer on the TV.** Settings → Device Preferences → About → press OK on **Build** seven times.
 Then Back → Developer options → turn on **USB debugging** (and **Network debugging** if there is one). Note the
@@ -118,8 +127,29 @@ Press Home on the remote. To undo it: `adb shell pm enable com.google.android.ap
 `tools/aerials.py --list` shows the rest of Apple's set; name the ones you want.
 
 Already have the original CleanYourTV launcher? It's signed with a different key: `adb uninstall com.gathin.tvhome`
-first. Want the ads and bloatware gone too, or to build it yourself with your own dock and hidden apps
-(`launcher/app/src/main/res/values/config.xml`)? Follow the original's full guide below.
+first.
+
+### Option B: the original way, with debloating
+
+This is CleanYourTV's own method: a coding assistant with shell access (Claude Code, Codex, Gemini CLI)
+backs up the TV, switches off the manufacturer's ads, tracking and preloaded junk (nothing is uninstalled, and
+there's a one-line restore), then builds and installs the launcher.
+
+1. Switch on USB debugging on the TV, as in Option A, step 1.
+2. Get this repo onto the computer, so the assistant builds **this** launcher rather than writing one of its own:
+   ```bash
+   git clone https://github.com/nickoliverio40/apple-tv-launcher.git
+   cd apple-tv-launcher
+   ```
+3. Open your assistant in that folder and paste in [`PROMPT.md`](PROMPT.md) with your TV model filled in. Add:
+   *"I cloned github.com/nickoliverio40/apple-tv-launcher. Use its `tools/` and `launcher/` as they are and only
+   edit `launcher/app/src/main/res/values/config.xml`."*
+4. Answer its checklist: which apps you use, which go in the dock, whether to keep the voice assistant,
+   Chromecast and updates.
+5. Add the moving backgrounds with `tools/aerials.py`, as in Option A, step 4.
+
+Rather do it yourself, without an assistant? [Doing it by hand](#doing-it-by-hand) below has every command:
+the same backup and debloat, then `launcher/build-and-install.sh` builds this launcher and makes it Home.
 
 ## Credits
 
