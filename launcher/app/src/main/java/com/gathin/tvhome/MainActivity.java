@@ -1117,7 +1117,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onBackPressed() {
-        // Home screen: Back goes nowhere.
+        // Home screen: Back starts the screensaver. Apps can't ask the dream manager themselves (WRITE_DREAM_STATE
+        // is a system permission); SystemUI's Somnambulator can, and does so when started.
+        try {
+            startActivity(new Intent(Intent.ACTION_MAIN)
+                    .setClassName("com.android.systemui", "com.android.systemui.Somnambulator"));
+        } catch (ActivityNotFoundException | SecurityException e) {
+            android.util.Log.w("TvHome", "no screensaver starter on this TV", e);
+        }
     }
 
     /**
@@ -1250,7 +1257,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         View item = (View) card.getParent();
         if (dockRow && position < COLUMNS) {
-            // Dock: park it at the bottom of the screen and show the top shelf for this app.
+            // Dock: park it at the bottom of the screen.
             int decoratedTop = item.getTop() - (int) (6 * density);
             int dy = decoratedTop - grid.getPaddingTop();
             // A 1px mismatch used to start a scroll on every dock move. Only scroll when the row is
@@ -2719,6 +2726,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
         addSettingsMenuRow(rows, popup, R.string.menu_tv_settings, this::openTvSettings);
+        addSettingsMenuRow(rows, popup, R.string.menu_sleep, () -> {
+            if (!SleepService.sleep()) Toast.makeText(this, R.string.sleep_unavailable, Toast.LENGTH_LONG).show();
+        });
         if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
         addSettingsMenuRow(rows, popup, R.string.background, this::showBackgroundMenu);

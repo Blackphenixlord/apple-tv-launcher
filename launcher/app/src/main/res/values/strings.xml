@@ -21,6 +21,10 @@
     <string name="aerials_no_space">Not enough space: it needs %1$d MB and the TV has %2$d MB free</string>
     <string name="top_buttons">Top icons</string>
     <string name="menu_tv_settings">TV settings</string>
+    <string name="menu_sleep">Sleep</string>
+    <string name="sleep_unavailable">Sleep needs the CleanYourTV sleep service: turn it on in Settings > Accessibility</string>
+    <string name="sleep_service_name">Sleep</string>
+    <string name="sleep_service_description">Lets the Home screen\'s Settings menu put the TV to sleep.</string>
     <string name="sounds">Sounds</string>
     <string name="sound_all">All sounds</string>
     <string name="sound_navigation">Navigation sound</string>

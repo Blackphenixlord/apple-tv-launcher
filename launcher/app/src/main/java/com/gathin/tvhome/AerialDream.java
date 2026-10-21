@@ -12,7 +12,6 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.TextClock;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -30,8 +29,8 @@ import java.util.Map;
 
 /**
  * The tvOS Aerial screensaver: Apple's aerial films from files/aerials, shuffled, one after another, with a
- * fade through black between them, the place's name at the lower left as each one begins and the time at
- * the upper right. Offline: the films were copied to the TV (push-aerials.ps1).
+ * fade through black between them and the place's name at the lower left as each one begins; no clock.
+ * Offline: the films were copied to the TV (push-aerials.ps1).
  *
  * Pick it in Settings > System > Ambient mode / Screen saver, or
  * {@code settings put secure screensaver_components com.gathin.tvhome/.AerialDream}.
@@ -56,7 +55,6 @@ public class AerialDream extends DreamService implements SurfaceHolder.Callback 
         setScreenBright(true);
 
         float d = getResources().getDisplayMetrics().density;
-        Typeface light = getResources().getFont(R.font.inter_display_light);
         Typeface medium = getResources().getFont(R.font.inter_medium);
 
         FrameLayout root = new FrameLayout(this);
@@ -79,18 +77,6 @@ public class AerialDream extends DreamService implements SurfaceHolder.Callback 
         FrameLayout.LayoutParams pl = wrap(Gravity.BOTTOM | Gravity.LEFT);
         pl.setMargins((int) (64 * d), 0, 0, (int) (56 * d));
         root.addView(place, pl);
-
-        TextClock clock = new TextClock(this);
-        clock.setFormat12Hour("h:mm");
-        clock.setFormat24Hour("HH:mm");
-        clock.setTextColor(0xE6FFFFFF);
-        clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34);
-        clock.setTypeface(light);
-        clock.setFontFeatureSettings("tnum");   // fixed-width digits: the time never shifts as it changes
-        clock.setShadowLayer(12 * d, 0, 2 * d, 0x80000000);
-        FrameLayout.LayoutParams cl = wrap(Gravity.TOP | Gravity.RIGHT);
-        cl.setMargins(0, (int) (44 * d), (int) (64 * d), 0);
-        root.addView(clock, cl);
 
         fade = new View(this);
         fade.setBackgroundColor(0xFF000000);
