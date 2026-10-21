@@ -523,9 +523,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
             return true;
         });
+        // Press: the launcher's menu, TV settings at its top. Hold: straight to the Android TV settings.
         btnSettings.setOnClickListener(v -> {
-            navSound.onAppOpened();   // the same pop as opening an app
-            open(systemIntent(Settings.ACTION_SETTINGS));
+            // The release after a hold can arrive as a click once Home is back: not a second press.
+            if (SystemClock.uptimeMillis() - settingsHeldAt < 1500) return;
+            showSettingsMenu();
         });
         // The bell: Home sounds on or off, null in the Hebrew layout.
         TextView btnMute = findViewById(R.id.btnMute);
@@ -541,7 +543,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         reorderButtonEnabled = cfg.reorderButton;
         applyTopButtons();
         btnSettings.setOnLongClickListener(v -> {
-            showSettingsMenu();
+            settingsHeldAt = SystemClock.uptimeMillis();
+            openTvSettings();
             return true;
         });
 
@@ -563,7 +566,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     : btnReorder.getVisibility() == View.VISIBLE ? R.id.btnReorder : firstButton;
             int leftButton = rtlMenuBar ? R.id.btnSettings : leftOfBar;
             // The clock capsule ends the row on the right where the layout has one (not the Hebrew header).
-            int rightButton = rtlMenuBar ? firstButton : clockBlock != null ? R.id.clockBlock : R.id.btnSettings;
+            int rightButton = rtlMenuBar ? firstButton : clockBlock != null && clockBlock.getVisibility() == View.VISIBLE ? R.id.clockBlock : R.id.btnSettings;
             boolean end = keyCode == KeyEvent.KEYCODE_DPAD_LEFT ? v.getId() == leftButton
                     : keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
             // Nowhere to go: the same nudge an app icon gives at the end of its row.
@@ -2367,8 +2370,48 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         rows.getChildAt(0).requestFocus();
     }
 
-    /** Settings menu, Top buttons: which of the optional round buttons show. Settings and the clock always do. */
-    private static final String TOP_PREFS = "top_buttons", TOP_INPUTS = "inputs", TOP_REORDER = "reorder", TOP_SOUND = "sound";
+    /**
+     * Settings menu, Sounds: the navigation sound, the app-open sound, and All sounds for both at once. Each row
+     * shows On or Off; OK flips it and the menu stays open on that row. The bell follows.
+     */
+    private void showSoundsMenu(int focusRow) {
+        View anchor = findViewById(R.id.btnSettings);
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (260 * density));
+        int[] titles = {R.string.sound_all, R.string.sound_navigation, R.string.sound_open};
+        boolean[] on = {!navSound.isMuted(), navSound.tickOn(), navSound.popOn()};
+        for (int i = 0; i < titles.length; i++) {
+            final int row = i;
+            View r = addSettingsMenuRow(rows, popup, getString(titles[i]), () -> {
+                if (row == 0) navSound.setMuted(!navSound.isMuted());
+                else if (row == 1) navSound.setTick(!navSound.tickOn());
+                else navSound.setPop(!navSound.popOn());
+                TextView bell = findViewById(R.id.btnMute);
+                if (bell != null) showMuted(bell, navSound.isMuted());
+                showSoundsMenu(row);
+            });
+            TextView status = r.findViewById(R.id.status);
+            status.setText(on[i] ? R.string.sound_on : R.string.sound_off);
+            status.setVisibility(View.VISIBLE);
+        }
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (260 * density), panel.getMeasuredWidth()));
+        dropIn(popup, panel, anchor, Gravity.END);
+        rows.getChildAt(Math.min(focusRow, rows.getChildCount() - 1)).requestFocus();
+    }
+
+    /** When Settings was last held, so the release that follows is not taken as a press. */
+    private long settingsHeldAt;
+
+    /** The Android TV settings, with the same pop as opening an app. */
+    private void openTvSettings() {
+        navSound.onAppOpened();
+        open(systemIntent(Settings.ACTION_SETTINGS));
+    }
+
+    /** Settings menu, Top icons: which of the optional top icons show (Inputs, Customize, sound, clock). Settings always does. */
+    private static final String TOP_PREFS = "top_buttons", TOP_INPUTS = "inputs", TOP_REORDER = "reorder", TOP_SOUND = "sound", TOP_CLOCK = "clock";
     private boolean reorderButtonEnabled = true;
 
     private boolean topShown(String key) {
@@ -2380,6 +2423,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View mute = findViewById(R.id.btnMute);
         if (mute != null) mute.setVisibility(topShown(TOP_SOUND) ? View.VISIBLE : View.GONE);
         btnReorder.setVisibility(reorderButtonEnabled && topShown(TOP_REORDER) ? View.VISIBLE : View.GONE);
+        View clock = findViewById(R.id.clockBlock);
+        if (clock != null) clock.setVisibility(topShown(TOP_CLOCK) ? View.VISIBLE : View.GONE);
         updateInputsButton();
     }
 
@@ -2389,8 +2434,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (260 * density));
-        String[] keys = {TOP_INPUTS, TOP_REORDER, TOP_SOUND};
-        int[] titles = {R.string.inputs, R.string.top_button_reorder, R.string.top_button_sound};
+        String[] keys = {TOP_INPUTS, TOP_REORDER, TOP_SOUND, TOP_CLOCK};
+        int[] titles = {R.string.inputs, R.string.top_button_reorder, R.string.top_button_sound, R.string.clock_panel};
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
             final int row = i;
@@ -2581,13 +2626,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
+        addSettingsMenuRow(rows, popup, R.string.menu_tv_settings, this::openTvSettings);
         addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
-        if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
         if (aerial != null || !AerialBackdrop.catalog(this).isEmpty()) addSettingsMenuRow(rows, popup, R.string.background, this::showBackgroundMenu);
         addSettingsMenuRow(rows, popup, R.string.top_buttons, () -> showTopButtonsMenu(0));
+        addSettingsMenuRow(rows, popup, R.string.sounds, () -> showSoundsMenu(0));
+        if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
         // Hebrew puts Settings at the left of the header: grow the menu inward from it.

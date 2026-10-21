@@ -63,17 +63,17 @@ each lifts and leans as it takes focus, just like the app icons.
 | Silence | Settings |
 |---|---|
 | ![The bell button showing the silenced bell with a slash](docs/fork/silenced.jpg) | ![The Settings menu: launcher settings, module cards, edit dock, reorder apps, background](docs/fork/settings-menu.jpg) |
-| **Sounds.** The bell turns Home's navigation tick and open pop off and on; silenced, it shows the bell with a slash. | **Settings.** Press for the TV's settings (with the open pop); hold OK for the launcher's own menu. |
+| **Sounds.** The bell turns all of Home's sounds off and on; silenced, it shows the bell with a slash. **Settings → Sounds** sets the navigation sound and the app open sound separately. | **Settings.** Press for the launcher's menu: TV settings, Background, Top icons, Sounds and more. Hold OK to go straight to the Android TV settings. |
 
 **Customize** (the arrows) rearranges the apps: OK picks one up, the arrows move it, Back places it.
 
-Don't want them all? Hold OK on **Settings**, then **Top buttons**, to show or hide Inputs, Customize and the sound bell. Settings and the clock always stay.
+Don't want them all? Open **Settings**, then **Top icons**, to show or hide Inputs, Customize, the sound bell and the clock. Settings always stays.
 
 ## Animated backgrounds
 
 ![The Background menu: Cycle through all marked Playing, then each aerial by name](docs/fork/background.jpg)
 
-Apple's aerials play behind Home as moving video. Hold OK on **Settings** and choose **Background**:
+Apple's aerials play behind Home as moving video. Open **Settings** and choose **Background**:
 
 - **Cycle through all.** Each aerial plays through once, then Home fades to the next, round the list.
 - **Or pick one** (North America Aurora, Hawaii, New York Night, London, Korea and Japan Night, Antarctica,

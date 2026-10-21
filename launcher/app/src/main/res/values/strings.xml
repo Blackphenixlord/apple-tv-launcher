@@ -8,7 +8,14 @@
     <string name="background">Background</string>
     <string name="background_current">Playing</string>
     <string name="background_cycle">Cycle through all</string>
-    <string name="top_buttons">Top buttons</string>
+    <string name="top_buttons">Top icons</string>
+    <string name="menu_tv_settings">TV settings</string>
+    <string name="sounds">Sounds</string>
+    <string name="sound_all">All sounds</string>
+    <string name="sound_navigation">Navigation sound</string>
+    <string name="sound_open">App open sound</string>
+    <string name="sound_on">On</string>
+    <string name="sound_off">Off</string>
     <string name="top_button_reorder">Switch apps (Customize)</string>
     <string name="top_button_sound">Sound</string>
     <string name="top_button_shown">Shown</string>

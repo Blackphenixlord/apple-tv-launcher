@@ -32,13 +32,17 @@ final class NavSound {
     private long lastKeyAt;
     private long lastTickAt;
     /** The bell button (MainActivity): no tick and no pop while true. Remembered across restarts. */
-    private boolean muted;
+    /** The Sounds menu and the bell (MainActivity): the navigation tick and the app-open pop, each on or off. */
+    private boolean tickOn, popOn;
     private final android.content.SharedPreferences prefs;
-    private static final String PREFS = "nav_sound", MUTED = "muted";
+    private static final String PREFS = "nav_sound", MUTED = "muted", TICK_ON = "tick_on", POP_ON = "pop_on";
 
     NavSound(Context context) {
         prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        muted = prefs.getBoolean(MUTED, false);
+        // "muted" is the older all-or-nothing switch: it still sets both until each is chosen on its own.
+        boolean wasMuted = prefs.getBoolean(MUTED, false);
+        tickOn = prefs.getBoolean(TICK_ON, !wasMuted);
+        popOn = prefs.getBoolean(POP_ON, !wasMuted);
         pool = new SoundPool.Builder()
                 .setMaxStreams(4)
                 .setAudioAttributes(new AudioAttributes.Builder()
@@ -61,13 +65,28 @@ final class NavSound {
                 ? pool.load(custom.getPath(), 1) : pool.load(context, fallback, 1);
     }
 
+    /** Every Home sound off: the bell shows its slash. */
     boolean isMuted() {
-        return muted;
+        return !tickOn && !popOn;
     }
 
+    /** All sounds: both on or both off. */
     void setMuted(boolean m) {
-        muted = m;
-        prefs.edit().putBoolean(MUTED, m).apply();
+        setTick(!m);
+        setPop(!m);
+    }
+
+    boolean tickOn() { return tickOn; }
+    boolean popOn() { return popOn; }
+
+    void setTick(boolean on) {
+        tickOn = on;
+        prefs.edit().putBoolean(TICK_ON, on).remove(MUTED).apply();
+    }
+
+    void setPop(boolean on) {
+        popOn = on;
+        prefs.edit().putBoolean(POP_ON, on).remove(MUTED).apply();
     }
 
     /** Called for every D-pad key down, before focus moves. */
@@ -78,14 +97,14 @@ final class NavSound {
     /** Called when focus lands on a new view; ticks only if a D-pad press just moved it. */
     void onFocusMoved() {
         long now = SystemClock.uptimeMillis();
-        if (muted || !tickLoaded || now - lastKeyAt > KEY_WINDOW_MS || now - lastTickAt < MIN_GAP_MS) return;
+        if (!tickOn || !tickLoaded || now - lastKeyAt > KEY_WINDOW_MS || now - lastTickAt < MIN_GAP_MS) return;
         lastTickAt = now;
         pool.play(tick, VOLUME, VOLUME, 1, 0, 1f);
     }
 
     /** Called as an app is launched from a tile. */
     void onAppOpened() {
-        if (!muted && popLoaded) pool.play(pop, VOLUME, VOLUME, 2, 0, 1f);
+        if (popOn && popLoaded) pool.play(pop, VOLUME, VOLUME, 2, 0, 1f);
     }
 
     void release() {
