@@ -62,12 +62,17 @@ each lifts and leans as it takes focus, just like the app icons.
 
 | Silence | Settings |
 |---|---|
-| ![The bell button showing the silenced bell with a slash](docs/fork/silenced.jpg) | ![The Settings menu: launcher settings, module cards, edit dock, reorder apps, background](docs/fork/settings-menu.jpg) |
-| **Sounds.** The bell turns all of Home's sounds off and on; silenced, it shows the bell with a slash. **Settings → Sounds** sets the navigation sound and the app open sound separately. | **Settings.** Press for the launcher's menu: TV settings, Edit dock, Reorder apps, Background, Top icons, Sounds and Module cards. Hold OK to go straight to the Android TV settings. |
+| ![The bell button showing the silenced bell with a slash](docs/fork/silenced.jpg) | ![The Settings menu: TV settings, edit dock, reorder apps, background, top icons, sounds, module cards](docs/fork/settings-menu.jpg) |
+| **Sounds.** The bell turns all of Home's sounds off and on; silenced, it shows the bell with a slash. Hold OK on it for the Sounds panel. | **Settings.** Press for the launcher's menu: TV settings, Edit dock, Reorder apps, Background, Top icons, Sounds and Module cards. Hold OK to go straight to the Android TV settings. |
 
 **Customize** (the arrows) rearranges the apps: OK picks one up, the arrows move it, Back places it.
 
 Don't want them all? Open **Settings**, then **Top icons**, to show or hide Inputs, Customize, the sound bell and the clock. Settings always stays.
+
+| Top icons | Sounds |
+|---|---|
+| ![Top icons: Inputs, Switch apps, Sound and Clock, each Shown or Hidden](docs/fork/top-icons.jpg) | ![Sounds: All sounds, Navigation sound and App open sound, each On or Off](docs/fork/sounds.jpg) |
+| **Settings → Top icons.** Show or hide Inputs, Customize, the sound bell and the clock. | **Settings → Sounds**, or hold OK on the bell. All sounds at once, or the navigation tick and the app open pop separately. |
 
 ## Animated backgrounds
 

@@ -537,6 +537,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 navSound.setMuted(!navSound.isMuted());
                 showMuted(btnMute, navSound.isMuted());
             });
+            // Hold: the Sounds panel, the same as Settings, Sounds.
+            btnMute.setOnLongClickListener(v -> {
+                showSoundsMenu(0, v);
+                return true;
+            });
         }
         btnReorder = findViewById(R.id.btnReorder);
         btnReorder.setOnClickListener(v -> toggleReorder());
@@ -2375,7 +2380,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * shows On or Off; OK flips it and the menu stays open on that row. The bell follows.
      */
     private void showSoundsMenu(int focusRow) {
-        View anchor = findViewById(R.id.btnSettings);
+        showSoundsMenu(focusRow, findViewById(R.id.btnSettings));
+    }
+
+    /** anchor: the button the panel drops from, Settings or the bell (hold OK on it). */
+    private void showSoundsMenu(int focusRow, View anchor) {
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (260 * density));
@@ -2389,7 +2398,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 else navSound.setPop(!navSound.popOn());
                 TextView bell = findViewById(R.id.btnMute);
                 if (bell != null) showMuted(bell, navSound.isMuted());
-                showSoundsMenu(row);
+                showSoundsMenu(row, anchor);
             });
             TextView status = r.findViewById(R.id.status);
             status.setText(on[i] ? R.string.sound_on : R.string.sound_off);
