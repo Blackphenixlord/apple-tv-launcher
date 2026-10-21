@@ -104,7 +104,8 @@ final class TvFocusMotion {
 
         // The artwork drifts a touch inside its frame while lifted: the tvOS parallax at rest.
         banner.animate().cancel();
-        if (focused) banner.setTranslationX(dx * 6f * density);
+        // No sideways start for the artwork: at that instant it has not grown yet, so any shift showed the
+        // tile's dark background along one edge. It only grows into its frame.
         banner.animate().scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f).translationX(0f)
                 .setDuration(focused ? TILT_MS : UNFOCUS_MS).setInterpolator(focused ? SETTLE_EASE : UNFOCUS_EASE)
                 .start();
