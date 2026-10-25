@@ -34,7 +34,7 @@ public final class LauncherSettingsActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_launcher_settings);
-        choices = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
+        choices = LocalProfiles.prefs(this, Config.SETTINGS_NAME);
         Config config = Config.load(this);
         columns = config.columns;
         rowsBelowDock = config.rowsBelowDock;

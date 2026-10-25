@@ -9,7 +9,9 @@ import android.graphics.Color;
 import android.graphics.RenderEffect;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.os.Build;
 import android.util.TypedValue;
@@ -25,42 +27,55 @@ import android.view.animation.PathInterpolator;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
+
+import androidx.dynamicanimation.animation.DynamicAnimation;
+import androidx.dynamicanimation.animation.SpringAnimation;
+import androidx.dynamicanimation.animation.SpringForce;
 
 import java.util.List;
 
 /**
- * The full-screen tvOS "Who's watching?" picker: round avatars on a dark, blurred Home.
+ * The full-screen tvOS "Who's watching?" picker, in Liquid Glass: round avatars, each a coloured disc under a
+ * glass dome (LiquidGlassDrawable), on a dark, blurred Home. A glass lens sits behind the focused avatar and
+ * springs to the next one as focus moves; the focused avatar lifts, leans and catches the light like an app icon
+ * (TvFocusMotion). Picking someone swells their avatar and switches the launcher to their profile (LocalProfiles).
  *
- * Full motion: the picker fades in while Home behind it blurs (RenderEffect, Android 12+; the radii are
- * made before the animation starts, so it allocates nothing per frame), and the avatars pop in one after
- * another with a slight overshoot. Reduced: a short fade, no blur, no pop. Off: it just appears.
- *
- * Picking the current profile closes it; picking anyone else hands over to Google TV's own switcher
- * (ProfileSwitch), since only the system can switch Android users.
+ * Full motion: the picker fades in while Home behind it blurs (RenderEffect, Android 12+; the radii are made before
+ * the animation starts, so it allocates nothing per frame), and the avatars pop in one after another. Reduced: a
+ * short fade, no blur, no pop, a stiff lens. Off: it just appears.
  */
 final class ProfilePicker {
+
+    interface Listener {
+        /** Someone other than the current profile was picked. */
+        void onProfilePicked(FamilyProfiles.Profile profile);
+    }
 
     private static final long FADE_MS = 260;
     private static final long POP_MS = 420;
     private static final long POP_STAGGER_MS = 70;
     private static final float BLUR_MAX_PX = 28f;
     private static final int BLUR_STEPS = 8;
+    private static final float AVATAR_DP = 148f;
+    private static final float LENS_DP = AVATAR_DP + 30f;
 
     private final Activity activity;
     private final View blurTarget;
     private final MotionLevel motion;
+    private final Listener listener;
     private final float density;
-    private final String switcherConfig;
     private Dialog dialog;
     private RenderEffect[] blurSteps;
     private ValueAnimator blurAnimator;
+    private View lens;
+    private SpringAnimation lensX, lensY;
+    private boolean picking;
 
-    ProfilePicker(Activity activity, View blurTarget, MotionLevel motion, String switcherConfig) {
+    ProfilePicker(Activity activity, View blurTarget, MotionLevel motion, Listener listener) {
         this.activity = activity;
         this.blurTarget = blurTarget;
         this.motion = motion;
-        this.switcherConfig = switcherConfig;
+        this.listener = listener;
         density = activity.getResources().getDisplayMetrics().density;
     }
 
@@ -70,15 +85,16 @@ final class ProfilePicker {
 
     void show(List<FamilyProfiles.Profile> profiles) {
         if (isShowing() || profiles.isEmpty()) return;
+        picking = false;
         FrameLayout content = new FrameLayout(activity);
         content.setBackgroundColor(0xB8000000);
 
         LinearLayout column = new LinearLayout(activity);
         column.setOrientation(LinearLayout.VERTICAL);
         column.setGravity(Gravity.CENTER_HORIZONTAL);
-        FrameLayout.LayoutParams columnLp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
-        content.addView(column, columnLp);
+        column.setClipChildren(false);
+        content.addView(column, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
 
         TextView title = new TextView(activity);
         title.setText(R.string.whos_watching);
@@ -88,15 +104,25 @@ final class ProfilePicker {
         title.setGravity(Gravity.CENTER);
         column.addView(title);
 
+        // The stage: the glass lens behind, the row of avatars over it.
+        FrameLayout stage = new FrameLayout(activity);
+        stage.setClipChildren(false);
+        stage.setClipToPadding(false);
+        column.addView(stage);
+
+        lens = new View(activity);
+        lens.setBackground(new LiquidGlassDrawable(-1f, 0x2EFFFFFF));
+        lens.setAlpha(0f);
+        stage.addView(lens, new FrameLayout.LayoutParams(dp(LENS_DP), dp(LENS_DP)));
+
         LinearLayout row = new LinearLayout(activity);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER);
         row.setClipChildren(false);
         row.setClipToPadding(false);
-        int vpad = dp(48);
-        row.setPadding(dp(24), vpad, dp(24), dp(12));
-        column.addView(row);
-        column.setClipChildren(false);
+        row.setPadding(dp(24), dp(44), dp(24), dp(12));
+        stage.addView(row, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView hint = new TextView(activity);
         hint.setText(R.string.profile_picker_hint);
@@ -106,11 +132,20 @@ final class ProfilePicker {
         hint.setPadding(0, dp(28), 0, 0);
         column.addView(hint);
 
+        lensX = new SpringAnimation(lens, DynamicAnimation.TRANSLATION_X);
+        lensY = new SpringAnimation(lens, DynamicAnimation.TRANSLATION_Y);
+        for (SpringAnimation s : new SpringAnimation[]{lensX, lensY}) {
+            s.setSpring(new SpringForce()
+                    .setStiffness(motion == MotionLevel.FULL ? 330f : 1400f)
+                    .setDampingRatio(motion == MotionLevel.FULL ? 0.72f : 0.95f));
+        }
+
         View[] items = new View[profiles.size()];
         int focus = 0;
         for (int i = 0; i < profiles.size(); i++) {
-            items[i] = avatarItem(profiles.get(i), profiles.get(i).current);
-            if (profiles.get(i).current) focus = i;
+            FamilyProfiles.Profile p = profiles.get(i);
+            items[i] = avatarItem(p, stage);
+            if (p.current) focus = i;
             row.addView(items[i]);
         }
 
@@ -122,6 +157,7 @@ final class ProfilePicker {
             w.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
         }
         dialog.setOnKeyListener((d, keyCode, event) -> {
+            TvFocusMotion.noteKey(event);   // the lean follows the D-pad, as on Home
             if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
                 dismiss();
                 return true;
@@ -130,6 +166,7 @@ final class ProfilePicker {
         });
         dialog.setOnDismissListener(d -> clearBlur());
         dialog.show();
+        TvFocusMotion.lastDirection = 0;
         items[focus].requestFocus();
         enter(content, items);
     }
@@ -203,7 +240,7 @@ final class ProfilePicker {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurTarget != null) blurTarget.setRenderEffect(null);
     }
 
-    private View avatarItem(FamilyProfiles.Profile p, boolean current) {
+    private View avatarItem(FamilyProfiles.Profile p, View stage) {
         LinearLayout item = new LinearLayout(activity);
         item.setOrientation(LinearLayout.VERTICAL);
         item.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -218,15 +255,17 @@ final class ProfilePicker {
         item.setLayoutParams(itemLp);
 
         TextView avatar = new TextView(activity);
-        int size = dp(148);
+        int size = dp(AVATAR_DP);
         avatar.setLayoutParams(new LinearLayout.LayoutParams(size, size));
         avatar.setGravity(Gravity.CENTER);
         avatar.setText(p.initial());
         avatar.setTextColor(Color.WHITE);
         avatar.setTextSize(TypedValue.COMPLEX_UNIT_SP, 60);
         avatar.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        avatar.setBackground(avatarBackground(p.color, density, 4));
+        avatar.setBackground(glassAvatar(p.color, density, 3));
         avatar.setDuplicateParentStateEnabled(true);
+        avatar.setClipToOutline(true);
+        if (motion == MotionLevel.FULL) avatar.setForeground(new ShineDrawable());
         item.addView(avatar);
 
         TextView name = new TextView(activity);
@@ -239,7 +278,7 @@ final class ProfilePicker {
         item.addView(name);
 
         TextView sub = new TextView(activity);
-        sub.setText(current ? activity.getString(R.string.profile_watching_now) : "");
+        sub.setText(p.current ? activity.getString(R.string.profile_watching_now) : "");
         sub.setTextColor(0x99FFFFFF);
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         sub.setGravity(Gravity.CENTER);
@@ -247,35 +286,79 @@ final class ProfilePicker {
 
         item.setOnFocusChangeListener((v, focused) -> {
             name.setAlpha(focused ? 1f : 0.7f);
-            if (!motion.animations()) return;
-            float s = focused ? 1.12f : 1f;
-            avatar.animate().scaleX(s).scaleY(s).translationZ(focused ? dp(16) : 0)
-                    .setDuration(motion.reduced() ? 100 : 260)
-                    .setInterpolator(motion.reduced() ? new DecelerateInterpolator()
-                            : new OvershootInterpolator(1.4f))
-                    .withLayer().start();
+            if (focused) moveLens(avatar, stage);
+            if (motion == MotionLevel.FULL) {
+                TvFocusMotion.applyButton(avatar, focused, density);   // lift, lean and the moving shine
+            } else if (motion.animations()) {
+                float s = focused ? 1.1f : 1f;
+                avatar.animate().scaleX(s).scaleY(s).setDuration(100)
+                        .setInterpolator(new DecelerateInterpolator()).withLayer().start();
+            }
         });
-        item.setOnClickListener(v -> pick(p, current));
+        item.setOnClickListener(v -> pick(p, avatar));
         return item;
     }
 
-    private void pick(FamilyProfiles.Profile p, boolean current) {
-        if (current) {
-            dismiss();
+    /** The glass lens springs to sit centred behind the focused avatar. */
+    private void moveLens(View avatar, View stage) {
+        if (lens == null) return;
+        View item = (View) avatar.getParent();
+        View row = (View) item.getParent();
+        if (avatar.getWidth() == 0 || row.getWidth() == 0) {
+            avatar.post(() -> moveLens(avatar, stage));
             return;
         }
-        if (dialog != null) dialog.dismiss();
-        ProfileSwitch.Result r = ProfileSwitch.open(activity, switcherConfig);
-        if (r == ProfileSwitch.Result.SWITCHER) {
-            Toast.makeText(activity, activity.getString(R.string.profile_choose_name, p.name), Toast.LENGTH_SHORT).show();
-        } else if (r == ProfileSwitch.Result.GOOGLE_HOME) {
-            Toast.makeText(activity, activity.getString(R.string.profile_switch_hint, p.name), Toast.LENGTH_LONG).show();
-        } else if (r == ProfileSwitch.Result.NOTHING) {
-            Toast.makeText(activity, R.string.profile_switch_unavailable, Toast.LENGTH_LONG).show();
+        // From layout positions, which ignore transforms: the avatars are still popping in (scaled to 0.6 from
+        // their centres) when the first one takes focus, and window coordinates would put the lens off to one side.
+        float half = (dp(LENS_DP) - avatar.getWidth()) / 2f;
+        float x = row.getLeft() + item.getLeft() + avatar.getLeft() - half;
+        float y = row.getTop() + item.getTop() + avatar.getTop() - half;
+        boolean first = lens.getAlpha() == 0f;
+        if (first || !motion.animations()) {
+            lensX.cancel();
+            lensY.cancel();
+            lens.setTranslationX(x);
+            lens.setTranslationY(y);
+            if (motion.animations()) lens.animate().alpha(1f).setStartDelay(motion.reduced() ? 0 : 200).setDuration(220).start();
+            else lens.setAlpha(1f);
+        } else {
+            lensX.animateToFinalPosition(x);
+            lensY.animateToFinalPosition(y);
         }
     }
 
-    /** A filled circle in the profile's colour; focused, it gains a white ring, as tvOS draws focus on an avatar. */
+    private void pick(FamilyProfiles.Profile p, View avatar) {
+        if (picking) return;
+        if (p.current) {
+            dismiss();
+            return;
+        }
+        picking = true;
+        Runnable done = () -> {
+            if (dialog != null) dialog.dismiss();
+            listener.onProfilePicked(p);
+        };
+        if (!motion.animations()) {
+            done.run();
+            return;
+        }
+        // The chosen avatar swells towards the viewer and the glass lens follows it, then Home reloads as them.
+        lens.animate().scaleX(1.25f).scaleY(1.25f).alpha(0f).setDuration(240).start();
+        avatar.animate().scaleX(1.3f).scaleY(1.3f).setDuration(motion.reduced() ? 120 : 240)
+                .setInterpolator(new PathInterpolator(0.25f, 1f, 0.5f, 1f)).withLayer()
+                .withEndAction(done).start();
+    }
+
+    /**
+     * A disc in the profile's colour under a glass dome (rim lit from above, a soft bloom); focused, it gains a white
+     * ring, as tvOS draws focus on an avatar.
+     */
+    static Drawable glassAvatar(int color, float density, int ringDp) {
+        return new LayerDrawable(new Drawable[]{avatarBackground(color, density, ringDp),
+                new LiquidGlassDrawable(-1f, 0x14FFFFFF)});
+    }
+
+    /** A filled circle in the profile's colour; focused, it gains a white ring. */
     static StateListDrawable avatarBackground(int color, float density, int ringDp) {
         GradientDrawable plain = new GradientDrawable();
         plain.setShape(GradientDrawable.OVAL);

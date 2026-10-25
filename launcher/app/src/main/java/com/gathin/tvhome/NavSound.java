@@ -38,7 +38,7 @@ final class NavSound {
     private static final String PREFS = "nav_sound", MUTED = "muted", TICK_ON = "tick_on", POP_ON = "pop_on";
 
     NavSound(Context context) {
-        prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        prefs = LocalProfiles.prefs(context, PREFS);
         // "muted" is the older all-or-nothing switch: it still sets both until each is chosen on its own.
         boolean wasMuted = prefs.getBoolean(MUTED, false);
         tickOn = prefs.getBoolean(TICK_ON, !wasMuted);

@@ -142,7 +142,7 @@
     <string name="profile_button">פרופיל: %1$s</string>
     <string name="profile_watching_now">צופה עכשיו</string>
     <string name="profile_default_name">את/ה</string>
-    <string name="profile_picker_hint">ההחלפה פותחת את מסך הפרופילים של Google TV</string>
+    <string name="profile_picker_hint">לכל אחד יש מעגן, אפליקציות ורקע משלו</string>
     <string name="profile_switch_hint">מסך הבית של Google TV פתוח. לחצו למעלה, בחרו את תמונת הפרופיל בפינה העליונה ואז את %1$s.</string>
     <string name="profile_switch_unavailable">לא ניתן לפתוח את מחליף הפרופילים של Google TV בטלוויזיה הזו.</string>
     <string name="motion_state">תנועה: %1$s</string>

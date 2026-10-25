@@ -193,6 +193,35 @@ public class FamilyEditionTest {
         assertNull(FamilyProfiles.matchText(ps, Collections.emptyList()));
     }
 
+    // ---- LocalProfiles: each person's settings files ----
+
+    @Test
+    public void profileKeysAreFileNameSafe() {
+        assertEquals("alex", LocalProfiles.key("Alex"));
+        assertEquals("mom_dad", LocalProfiles.key("  Mom & Dad! "));
+        assertEquals("élodie", LocalProfiles.key("Élodie"));
+        assertEquals("", LocalProfiles.key("  "));
+        assertEquals("", LocalProfiles.key(null));
+    }
+
+    @Test
+    public void settingsAreScopedPerProfile() {
+        assertEquals("launcher_settings__sam", LocalProfiles.scoped("launcher_settings", "Sam"));
+        assertEquals("order.txt__family", LocalProfiles.scoped("order.txt", "Family"));
+        // No profile picked yet: the original, shared names, exactly as before profiles existed.
+        assertEquals("launcher_settings", LocalProfiles.scoped("launcher_settings", null));
+        assertEquals("order.txt", LocalProfiles.scoped("order.txt", "   "));
+    }
+
+    @Test
+    public void everyPerProfileStoreHasADistinctName() {
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (String p : LocalProfiles.PREFS) assertTrue(p, seen.add(LocalProfiles.scoped(p, "Alex")));
+        for (String f : LocalProfiles.FILES) assertTrue(f, seen.add(LocalProfiles.scoped(f, "Alex")));
+        assertTrue(Arrays.asList(LocalProfiles.FILES).contains(Order.FILE_NAME));
+        assertTrue(Arrays.asList(LocalProfiles.PREFS).contains(Config.SETTINGS_NAME));
+    }
+
     // ---- ProfileSwitch's match on launcherx activity names ----
 
     @Test

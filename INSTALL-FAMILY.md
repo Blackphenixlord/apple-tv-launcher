@@ -24,6 +24,18 @@ Android itself opens Home. Google TV's launcher stays installed and enabled: **d
 update ever takes Home back, HomeKeyService covers it as above until the installer is run again.
 `undo-family.ps1` gives Home back to Google TV before uninstalling.
 
+**The launcher's own profiles.** "Who's watching?" (at startup, after standby, and from the top-right avatar) lists
+the names given with `-Profiles`. Each person gets their own dock and app order, hidden apps (App Library, after the
+last row), background, sounds and motion; a new profile starts as a copy of the current setup. These are the
+launcher's profiles, not Google's: apps keep their own logins and profile pickers. The picker is Liquid Glass, with
+a glass lens that springs from person to person.
+
+**Why not the real Home on Google TV 14 (checked on the TCL G08).** `set-home-activity` and the HOME role change
+to this launcher, but Android still opens Google's launcher on Home: it declares Home at priority 2, which apps
+outside the system image cannot match. With Google's launcher disabled, the setup wizard's `RecoveryActivity`
+(priority 1) takes Home the same way (docs/TROUBLESHOOTING.md); disabling the wizard too breaks Chromecast casting
+on Google TV 14 and can drop the saved Wi-Fi. So on this TV the launcher covers Google's home.
+
 Everything else stays Google's: Play Store, your Google account, Chromecast, Google Assistant and voice, Google
 Home controls, the Google TV phone remote, the Settings/Input/app buttons on the remote.
 

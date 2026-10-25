@@ -97,7 +97,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
      * configured one.
      */
     static String chosen(Context context, String configured) {
-        String f = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CHOSEN, null);
+        String f = LocalProfiles.prefs(context, PREFS).getString(CHOSEN, null);
         if (CYCLE.equals(f)) return CYCLE;
         File dir = context.getExternalFilesDir("aerials");
         return f != null && dir != null && new File(dir, f).canRead() ? f : configured;
@@ -105,7 +105,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
 
     /** Remembers the Background menu's pick (a file, or CYCLE); the new flight starts from its beginning. */
     static void choose(Context context, String file) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(CHOSEN, file).remove(POSITION).apply();
+        LocalProfiles.prefs(context, PREFS).edit().putString(CHOSEN, file).remove(POSITION).apply();
     }
 
     /**
@@ -120,7 +120,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         if (cycle) {
             java.util.List<String[]> all = catalog(context);
             if (all.isEmpty()) return null;
-            String at = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CYCLE_FILE, null);
+            String at = LocalProfiles.prefs(context, PREFS).getString(CYCLE_FILE, null);
             fileName = at != null && new File(dir, at).canRead() ? at : all.get(0)[0];
         }
         File f = new File(dir, fileName);
@@ -195,7 +195,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         this.file = file;
         this.context = context.getApplicationContext();
         this.cycle = cycle;
-        prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        prefs = LocalProfiles.prefs(context, PREFS);
         FrameLayout.LayoutParams full = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
 
