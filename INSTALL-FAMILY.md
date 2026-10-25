@@ -35,6 +35,9 @@ to this launcher, but Android still opens Google's launcher on Home: it declares
 outside the system image cannot match. With Google's launcher disabled, the setup wizard's `RecoveryActivity`
 (priority 1) takes Home the same way (docs/TROUBLESHOOTING.md); disabling the wizard too breaks Chromecast casting
 on Google TV 14 and can drop the saved Wi-Fi. So on this TV the launcher covers Google's home.
+`launcher/real-home.ps1` tries the one way around that, turning off only the wizard's `RecoveryActivity` so the
+wizard's Cast provider stays on; on the TCL G08 (Android 14, 2026-10-25) Android refuses it
+(`SecurityException: Shell cannot change component state`), and the script changes nothing.
 
 Everything else stays Google's: Play Store, your Google account, Chromecast, Google Assistant and voice, Google
 Home controls, the Google TV phone remote, the Settings/Input/app buttons on the remote.
