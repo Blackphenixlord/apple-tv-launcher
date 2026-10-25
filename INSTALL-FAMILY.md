@@ -130,7 +130,13 @@ script allows it for this launcher only; by hand:
 
 ```powershell
 adb -s $tv shell appops set --user 0 com.gathin.tvhome AUTO_START allow
+adb -s $tv shell appops write-settings
 ```
+
+The second line matters: Android writes app permissions like this to disk only every 30 minutes or at a clean
+shutdown. Unplugging the TV before that loses it, and at the next boot TCL blocks the launcher again (logcat:
+`TclAppBoot ... forbid bind service ... HomeKeyService` and the same for `BOOT_COMPLETED`). Checked on this TV:
+with it saved, a restart comes up on this launcher.
 
 Android 13+ blocks turning on a sideloaded app's accessibility service from the TV's Settings ("Restricted
 setting"); the adb `settings` commands above are not affected.

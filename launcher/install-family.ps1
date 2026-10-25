@@ -152,8 +152,10 @@ foreach ($u in $users) {
     # TCL firmware (TclAppBoot) refuses to start an app's services in the background, the accessibility
     # service included, unless the app has TCL's own AUTO_START op: Settings > Apps > Auto-start, per app.
     # Without it HomeKeyService stays "enabled" but never binds. Other TVs have no such op; the error is ignored.
-    $auto = Tv "appops set --user $id $Pkg AUTO_START allow"
-    if ($auto -notmatch 'Unknown|Error') { Write-Host '  auto-start allowed (TCL)' }
+    # Android saves app ops to disk only every 30 minutes or at a clean shutdown; write-settings saves it now,
+    # or unplugging the TV soon after installing loses it and the launcher no longer comes up at boot.
+    $auto = Tv "appops set --user $id $Pkg AUTO_START allow && appops write-settings"
+    if ($auto -notmatch 'Unknown|Error') { Write-Host '  auto-start allowed and saved (TCL)' }
     # family.json through the launcher's ThemeProvider (only the adb shell may write it). A user that is not
     # running cannot take it, and is not started for this; re-run once it has been used.
     if ((Tv "am get-started-user-state $id") -notmatch 'RUNNING') {

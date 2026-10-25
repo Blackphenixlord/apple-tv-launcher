@@ -34,7 +34,8 @@ if [ "${FAMILY_MODE:-0}" = 1 ]; then
   for u in $USERS; do
     "$PY" -I ../tools/tv.py "pm install-existing --user $u com.gathin.tvhome"
     # TCL: background service starts need TCL's AUTO_START op, or HomeKeyService never binds (no-op elsewhere).
-    "$PY" -I ../tools/tv.py "appops set --user $u com.gathin.tvhome AUTO_START allow 2>/dev/null; true"
+    # write-settings saves it now: app ops otherwise reach disk only every 30 min, and a power cut loses them.
+    "$PY" -I ../tools/tv.py "appops set --user $u com.gathin.tvhome AUTO_START allow 2>/dev/null && appops write-settings; true"
     "$PY" -I ../tools/tv.py "s=\$(settings --user $u get secure enabled_accessibility_services); case \"\$s\" in *HomeKeyService*) ;; null|'') settings --user $u put secure enabled_accessibility_services $SVC ;; *) settings --user $u put secure enabled_accessibility_services \"\$s:$SVC\" ;; esac; settings --user $u put secure accessibility_enabled 1; echo HomeKeyService enabled for user $u"
   done
   echo "Family mode installed for users: $(echo $USERS). Google TV's launcher is still the default Home."
