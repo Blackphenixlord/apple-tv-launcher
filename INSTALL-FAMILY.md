@@ -222,6 +222,34 @@ If one works, pass it to the installer so every profile uses it:
 .\launcher\install-family.ps1 -Serial $tv -Apk $apk -ProfileSwitcher 'com.google.android.apps.tv.launcherx/<the.activity.Name>' -SkipBackup
 ```
 
+## 6b. Real Home, and casting without Chromecast
+
+To make the launcher the only Home (no Google home at all), after step 4:
+
+```powershell
+.\launcher\real-home.ps1 -Serial $tv -WholeWizard      # undo: .\launcher\real-home.ps1 -Serial $tv -Undo
+```
+
+It turns off Google TV's launcher and the setup wizard (after checking the wizard owns no saved Wi-Fi). Done on
+the TCL G08: Home, Wi-Fi, the internet and the Play Store all kept working. The Cast buttons in Netflix and similar
+apps need the wizard's Chromecast certificate, so for casting from phones use receivers instead:
+
+- **The TV's own DLNA receiver** ("Living Room TV", TCL's): accepts videos, music and photos from VLC, BubbleUPnP and
+  many gallery apps. The first cast asks "A device is trying to connect to this TV"; tick *Always accept*.
+- **Kodi** (free, open source; Play Store): DLNA receiver and AirPlay (iPhone, iPad). Install it, open it once, then
+  with Kodi stopped turn its receivers on, either in Kodi (Settings → Services → UPnP/DLNA: *Enable UPnP support*,
+  *Allow remote control via UPnP*; AirPlay: *Enable AirPlay support*) or over adb:
+
+  ```powershell
+  $k = '/sdcard/Android/data/org.xbmc.kodi/files/.kodi/userdata/guisettings.xml'
+  adb -s $tv shell am force-stop org.xbmc.kodi
+  adb -s $tv pull $k guisettings.xml
+  # set services.upnp, services.upnprenderer, services.airplay, services.airplayvideosupport to true, then:
+  adb -s $tv push guisettings.xml $k
+  ```
+
+  Checked on the TCL G08: Kodi appears as a DLNA renderer and as `_airplay._tcp`, and a video sent to it plays.
+
 ## 7. Motion and frame times
 
 **Settings (top right) → Motion**: Full (default), Reduced, Off. Full: spring focus with a slight overshoot,
