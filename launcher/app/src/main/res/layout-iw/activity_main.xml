@@ -317,6 +317,21 @@
                     android:drawableStart="@drawable/ic_settings"
                     android:nextFocusDown="@+id/grid" />
 
+                <!-- Family edition: the current Google TV profile's avatar; opens "Who's watching?". -->
+                <TextView
+                    android:id="@+id/btnProfile"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_marginStart="10dp"
+                    android:focusable="true"
+                    android:clickable="true"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="18sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:nextFocusDown="@+id/grid" />
+
                 <TextView
                     android:id="@+id/btnReorder"
                     style="@style/TopButtonIcon"
