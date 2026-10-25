@@ -222,6 +222,28 @@ public class FamilyEditionTest {
         assertTrue(Arrays.asList(LocalProfiles.PREFS).contains(Config.SETTINGS_NAME));
     }
 
+    // ---- SecureSettings and SleepTimer ----
+
+    @Test
+    public void selfHealKeepsOtherAccessibilityServices() {
+        String own = "com.gathin.tvhome/";
+        assertEquals("a.b/.Talk:c.d/.Other",
+                SecureSettings.without("a.b/.Talk:com.gathin.tvhome/.HomeKeyService:c.d/.Other", own));
+        assertEquals("", SecureSettings.without("com.gathin.tvhome/.HomeKeyService", own));
+        assertEquals("", SecureSettings.without(null, own));
+        assertEquals("", SecureSettings.without("null", own));
+        assertEquals("x.y/.Z", SecureSettings.without("::x.y/.Z:", own));
+    }
+
+    @Test
+    public void sleepTimerRoundsUpTheMinutesLeft() {
+        assertEquals(0, SleepTimer.minutesLeft(0, 1_000));
+        assertEquals(0, SleepTimer.minutesLeft(5_000, 5_000));
+        assertEquals(1, SleepTimer.minutesLeft(60_000, 1));
+        assertEquals(30, SleepTimer.minutesLeft(30 * 60_000L, 0));
+        assertEquals(30, SleepTimer.minutesLeft(30 * 60_000L, 1));
+    }
+
     // ---- ProfileSwitch's match on launcherx activity names ----
 
     @Test

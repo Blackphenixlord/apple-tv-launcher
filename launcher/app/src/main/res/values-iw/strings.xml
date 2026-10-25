@@ -152,4 +152,13 @@
     <string name="motion_off">כבויה</string>
     <string name="google_home">מסך הבית של Google TV</string>
     <string name="profile_choose_name">בחרו את %1$s</string>
+    <string name="sleep_timer_off">טיימר שינה: כבוי</string>
+    <string name="sleep_timer_left">טיימר שינה: נותרו %1$d דק׳</string>
+    <string name="sleep_timer_none">כבוי</string>
+    <string name="sleep_timer_minutes">%1$d דקות</string>
+    <string name="sleep_timer_set">הטלוויזיה תיכנס למצב שינה בעוד %1$d דקות</string>
+    <string name="sleep_timer_cancelled">טיימר השינה כבוי</string>
+    <string name="adblock_state">חסימת פרסומות (DNS): %1$s</string>
+    <string name="adblock_turned_on">חסימת פרסומות פועלת: AdGuard DNS. לא חוסם פרסומות ביוטיוב.</string>
+    <string name="adblock_turned_off">חסימת פרסומות כבויה: DNS אוטומטי</string>
 </resources>

@@ -13,6 +13,10 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Family mode (FamilyHome): this launcher comes up in front of Google TV's home after boot. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Granted only over adb (install-family.ps1): lets Home switch its own Home helper back on and toggle the
+         ad-blocking Private DNS; see SecureSettings. Without the grant those features stay off. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at
          runtime: build-and-install grants it with pm grant, so lint's Android 12 "ask for COARSE with
          FINE" rule does not apply here. -->
@@ -119,6 +123,11 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Settings menu, Sleep timer: the alarm that puts the TV to sleep; see SleepTimer. -->
+        <receiver
+            android:name=".SleepTimer"
+            android:exported="false" />
 
         <!-- Screensaver: pick it in Settings, or `settings put secure screensaver_components
              com.gathin.tvhome/.ClockDream` over adb. -->

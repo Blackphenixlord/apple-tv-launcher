@@ -700,6 +700,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         promptsPaused = false;
         // Family mode: this launcher is in front again, so Google's home no longer counts as asked for.
         FamilyHome.launcherResumed();
+        SecureSettings.ensureHomeHelper(this);   // TCL boot, an update or a force-stop can leave it unbound
         refreshProfileButton();   // a pick in Google TV's chooser may have changed who is watching
         askWhoIsWatchingIfDue();
         if (rebuildOnResume) {
@@ -898,6 +899,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        if (isDuplicatePress(event)) return true;
         TvFocusMotion.noteKey(event);   // which way the next focused icon should lean
         if (event.getAction() == KeyEvent.ACTION_DOWN && TvFocusMotion.lastDirection == event.getKeyCode()) navSound.noteKey();
         if (handleSettingsKey(event)) return true;
@@ -2695,6 +2697,44 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         profilePicker.show(familyProfiles);
     }
 
+    /** Settings menu, Sleep timer: Off, 30, 60, 90 or 120 minutes; the current choice marked. */
+    private void showSleepTimerMenu() {
+        View anchor = findViewById(R.id.btnSettings);
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (240 * density));
+        int left = SleepTimer.minutesLeft(this);
+        for (int m : SleepTimer.MINUTES) {
+            String title = m == 0 ? getString(R.string.sleep_timer_none) : getString(R.string.sleep_timer_minutes, m);
+            View r = addSettingsMenuRow(rows, popup, title, () -> {
+                SleepTimer.set(this, m);
+                Toast.makeText(this, m == 0 ? getString(R.string.sleep_timer_cancelled)
+                        : getString(R.string.sleep_timer_set, m), Toast.LENGTH_SHORT).show();
+            });
+            r.findViewById(R.id.dot).setVisibility(m == 0 ? (left == 0 ? View.VISIBLE : View.GONE) : View.GONE);
+        }
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (240 * density), panel.getMeasuredWidth()));
+        dropIn(popup, panel, anchor, Gravity.END);
+        rows.getChildAt(0).requestFocus();
+    }
+
+    /**
+     * Some IR remotes send one press twice within a few dozen ms, which moved focus two tiles (idea from the
+     * BrezhnevEugen/tv-vibehack fork). A key-down of the same key within DUPLICATE_PRESS_MS of the last is dropped.
+     */
+    private static final long DUPLICATE_PRESS_MS = 140;
+    private int lastDownKey;
+    private long lastDownAt;
+
+    private boolean isDuplicatePress(KeyEvent event) {
+        if (event.getAction() != KeyEvent.ACTION_DOWN || event.getRepeatCount() != 0) return false;
+        boolean dup = event.getKeyCode() == lastDownKey && event.getEventTime() - lastDownAt < DUPLICATE_PRESS_MS;
+        lastDownKey = event.getKeyCode();
+        lastDownAt = event.getEventTime();
+        return dup;
+    }
+
     private static int motionLabel(MotionLevel m) {
         return m == MotionLevel.FULL ? R.string.motion_full : m == MotionLevel.REDUCED ? R.string.motion_reduced : R.string.motion_off;
     }
@@ -2906,6 +2946,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         addSettingsMenuRow(rows, popup, getString(R.string.motion_state, getString(motionLabel(motion))),
                 () -> showMotionMenu());
         if (btnProfile != null) addSettingsMenuRow(rows, popup, R.string.whos_watching, this::showProfilePicker);
+        int left = SleepTimer.minutesLeft(this);
+        addSettingsMenuRow(rows, popup, left > 0 ? getString(R.string.sleep_timer_left, left) : getString(R.string.sleep_timer_off),
+                this::showSleepTimerMenu);
+        if (SecureSettings.canWrite(this)) {
+            boolean dns = SecureSettings.adBlockDnsOn(this);
+            addSettingsMenuRow(rows, popup, getString(R.string.adblock_state, getString(dns ? R.string.on : R.string.off)), () -> {
+                if (SecureSettings.setAdBlockDns(this, !dns)) {
+                    Toast.makeText(this, dns ? R.string.adblock_turned_off : R.string.adblock_turned_on, Toast.LENGTH_LONG).show();
+                }
+            });
+        }
         // Family mode: Google TV's own home, the same as a double Home press.
         if (FamilyHome.isFamilyMode(this) && FamilyHome.googleHome(this) != null) {
             addSettingsMenuRow(rows, popup, R.string.google_home, () -> FamilyHome.openGoogleHome(this));

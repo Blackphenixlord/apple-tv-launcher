@@ -57,9 +57,29 @@ public class HomeKeyService extends AccessibilityService {
     /** In the first minutes after boot a service with no window information assumes Google's home is showing. */
     private static final long BOOT_WINDOW_MS = 3 * 60_000L;
 
+    /** The bound instance, for SecureSettings (is it running?) and the Sleep row and timer (lock screen). */
+    private static HomeKeyService running;
+
+    static boolean isRunning() {
+        return running != null;
+    }
+
+    /** The lock-screen global action, which TVs answer by going to sleep; false when not bound or refused. */
+    static boolean lockScreen() {
+        HomeKeyService s = running;
+        return s != null && s.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
+    }
+
+    @Override
+    public void onDestroy() {
+        if (running == this) running = null;
+        super.onDestroy();
+    }
+
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
+        running = this;
         settingsScancodes = getResources().getIntArray(R.array.settings_key_scancodes);
         // Keycodes and the panel choice can also come from a theme; theme.sh restarts this service.
         Config config = Config.load(this);

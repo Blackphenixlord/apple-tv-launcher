@@ -157,4 +157,13 @@
     <string name="motion_off">Off</string>
     <string name="google_home">Google TV home</string>
     <string name="profile_choose_name">Choose %1$s</string>
+    <string name="sleep_timer_off">Sleep timer: Off</string>
+    <string name="sleep_timer_left">Sleep timer: %1$d min left</string>
+    <string name="sleep_timer_none">Off</string>
+    <string name="sleep_timer_minutes">%1$d minutes</string>
+    <string name="sleep_timer_set">The TV will sleep in %1$d minutes</string>
+    <string name="sleep_timer_cancelled">Sleep timer off</string>
+    <string name="adblock_state">Ad blocking (DNS): %1$s</string>
+    <string name="adblock_turned_on">Ad blocking on: AdGuard DNS. It does not block YouTube ads.</string>
+    <string name="adblock_turned_off">Ad blocking off: automatic DNS</string>
 </resources>

@@ -16,7 +16,9 @@ public class SleepService extends AccessibilityService {
     /** False when the service is not enabled, or the TV refused. */
     static boolean sleep() {
         SleepService s = running;
-        return s != null && s.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
+        if (s != null && s.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)) return true;
+        // Family installs enable only the Home helper; it is an accessibility service too and can do the same.
+        return HomeKeyService.lockScreen();
     }
 
     @Override

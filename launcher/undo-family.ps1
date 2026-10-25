@@ -66,9 +66,12 @@ foreach ($id in $ids) {
     Write-Host "  accessibility services: $(Tv "settings --user $id get secure enabled_accessibility_services")"
 }
 
-# Home back to Google TV first (install-family.ps1 -DefaultHome made this launcher the default), so the TV is
-# never left with no Home while this launcher goes away.
-$google = Tv "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME $GoogleHome | tail -n 1"
+# Home back to Google TV first (install-family.ps1 -DefaultHome or real-home.ps1 made this launcher the default),
+# so the TV is never left with no Home while this launcher goes away. real-home.ps1 turned Google's launcher and the
+# setup wizard's Recovery screen off; both come back on (a no-op when they already are).
+Tv "pm enable $GoogleHome" | Out-Null
+Tv 'pm enable com.google.android.tungsten.setupwraith/.RecoveryActivity' | Out-Null
+$google =Tv "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME $GoogleHome | tail -n 1"
 foreach ($id in $ids) {
     if ((Tv "am get-started-user-state $id") -notmatch 'RUNNING') { continue }
     Write-Host (Tv "cmd package set-home-activity --user $id $google")

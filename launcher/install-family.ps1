@@ -154,6 +154,9 @@ foreach ($u in $users) {
     Tv "settings --user $id put secure accessibility_enabled 1" | Out-Null
     # The Wi-Fi pill's network name needs location on Android 10+; harmless if refused.
     Tv "pm grant --user $id $Pkg android.permission.ACCESS_FINE_LOCATION" | Out-Null
+    # Lets Home switch its own Home helper back on when the TV turns it off, and the ad-blocking DNS switch
+    # (SecureSettings). Only adb can grant it; uninstalling the launcher takes it away.
+    Tv "pm grant --user $id $Pkg android.permission.WRITE_SECURE_SETTINGS" | Out-Null
     # TCL firmware (TclAppBoot) refuses to start an app's services in the background, the accessibility
     # service included, unless the app has TCL's own AUTO_START op: Settings > Apps > Auto-start, per app.
     # Without it HomeKeyService stays "enabled" but never binds. Other TVs have no such op; the error is ignored.
