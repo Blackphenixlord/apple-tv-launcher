@@ -142,4 +142,28 @@
     <!-- Cinematic top shelf (cinematic_home): the line under the focused dock app's name; %1$s is when it was
          last opened, e.g. "5 minutes ago" or "yesterday, 9:40 pm". -->
     <string name="last_opened">Last opened %1$s</string>
+    <!-- Family edition -->
+    <string name="whos_watching">Who\'s watching?</string>
+    <string name="profile_button">Profile: %1$s</string>
+    <string name="profile_watching_now">Watching now</string>
+    <string name="profile_default_name">You</string>
+    <string name="profile_picker_hint">Everyone has their own dock, apps and background</string>
+    <string name="profile_switch_hint">Google TV home is open. Press Up, select the profile picture at the top right, then choose %1$s.</string>
+    <string name="profile_switch_unavailable">Google TV\'s profile switcher could not be opened on this TV.</string>
+    <string name="motion_state">Motion: %1$s</string>
+    <string name="motion">Motion</string>
+    <string name="motion_full">Full</string>
+    <string name="motion_reduced">Reduced</string>
+    <string name="motion_off">Off</string>
+    <string name="google_home">Google TV home</string>
+    <string name="profile_choose_name">Choose %1$s</string>
+    <string name="sleep_timer_off">Sleep timer: Off</string>
+    <string name="sleep_timer_left">Sleep timer: %1$d min left</string>
+    <string name="sleep_timer_none">Off</string>
+    <string name="sleep_timer_minutes">%1$d minutes</string>
+    <string name="sleep_timer_set">The TV will sleep in %1$d minutes</string>
+    <string name="sleep_timer_cancelled">Sleep timer off</string>
+    <string name="adblock_state">Ad blocking (DNS): %1$s</string>
+    <string name="adblock_turned_on">Ad blocking on: AdGuard DNS. It does not block YouTube ads.</string>
+    <string name="adblock_turned_off">Ad blocking off: automatic DNS</string>
 </resources>

@@ -38,7 +38,7 @@ final class WallpaperPlayer {
         this.root = root;
         files = new ArrayList<>(config.wallpapers);
         interval = config.wallpaperRotationMinutes * 60_000L;
-        preferences = context.getSharedPreferences("wallpaper_rotation", Context.MODE_PRIVATE);
+        preferences = LocalProfiles.prefs(context, "wallpaper_rotation");
         DisplayMetrics metrics = context.getResources().getDisplayMetrics();
         width = metrics.widthPixels;
         height = metrics.heightPixels;

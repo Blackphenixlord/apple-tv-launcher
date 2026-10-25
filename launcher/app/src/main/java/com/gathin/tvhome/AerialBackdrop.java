@@ -2,14 +2,19 @@ package com.gathin.tvhome;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.graphics.drawable.GradientDrawable;
 import android.media.MediaPlayer;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+import android.view.PixelCopy;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 
 import java.io.File;
 
@@ -21,6 +26,10 @@ import java.io.File;
  *
  * The decoder is released whenever Home is not in front: TVs have one or two hardware decoders, and an app
  * opened from Home must never find them taken. The position is kept, so the flight picks up where it left.
+ *
+ * Cycling crossfades from one aerial to the next with that same single decoder: the last frame is copied
+ * off the video surface (PixelCopy, into one reused 960x540 bitmap) and shown as a still over the video
+ * while the next flight starts under it, then the still fades away once the new first frame is up.
  */
 final class AerialBackdrop implements SurfaceHolder.Callback {
     private static final String TAG = "TvHome.Aerial";
@@ -28,6 +37,12 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
     /** Not final: cycling swaps in the next aerial. */
     private File file;
     private final View cover;
+    private final SurfaceView video;
+    /** The previous aerial's last frame during a crossfade; hidden otherwise. */
+    private final ImageView still;
+    private Bitmap stillBitmap;
+    /** Crossfade length when cycling (Settings, Motion): 0 fades through black as before. */
+    private int crossfadeMs = 1200;
     private final View gridDim;
     private final SharedPreferences prefs;
     private MediaPlayer player;
@@ -50,7 +65,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         if (json.isFile()) {
             try {
                 String text = new String(java.nio.file.Files.readAllBytes(json.toPath()), java.nio.charset.StandardCharsets.UTF_8);
-                if (text.startsWith("﻿")) text = text.substring(1);   // written by PowerShell, with a BOM
+                if (text.startsWith("\uFEFF")) text = text.substring(1);   // written by PowerShell, with a BOM
                 org.json.JSONArray a = new org.json.JSONArray(text);
                 for (int i = 0; i < a.length(); i++) {
                     org.json.JSONObject o = a.getJSONObject(i);
@@ -82,7 +97,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
      * configured one.
      */
     static String chosen(Context context, String configured) {
-        String f = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CHOSEN, null);
+        String f = LocalProfiles.prefs(context, PREFS).getString(CHOSEN, null);
         if (CYCLE.equals(f)) return CYCLE;
         File dir = context.getExternalFilesDir("aerials");
         return f != null && dir != null && new File(dir, f).canRead() ? f : configured;
@@ -90,7 +105,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
 
     /** Remembers the Background menu's pick (a file, or CYCLE); the new flight starts from its beginning. */
     static void choose(Context context, String file) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(CHOSEN, file).remove(POSITION).apply();
+        LocalProfiles.prefs(context, PREFS).edit().putString(CHOSEN, file).remove(POSITION).apply();
     }
 
     /**
@@ -105,7 +120,7 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         if (cycle) {
             java.util.List<String[]> all = catalog(context);
             if (all.isEmpty()) return null;
-            String at = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CYCLE_FILE, null);
+            String at = LocalProfiles.prefs(context, PREFS).getString(CYCLE_FILE, null);
             fileName = at != null && new File(dir, at).canRead() ? at : all.get(0)[0];
         }
         File f = new File(dir, fileName);
@@ -125,10 +140,48 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         return new File(file.getParentFile(), all.get(i % all.size())[0]);
     }
 
-    /** One aerial finished while cycling: fade to black, swap in the next, and the first frame fades it back in. */
+    void setCrossfadeMs(int ms) {
+        crossfadeMs = ms;
+    }
+
+    /**
+     * One aerial finished while cycling: copy its last frame into the still, start the next one under it,
+     * and fade the still away on the new first frame. Without a frame to copy (or with Motion off), fade
+     * to black, swap in the next, and the first frame fades it back in.
+     */
     private void advance() {
         File next = nextInCycle();
         Log.i(TAG, "cycle: " + file.getName() + " -> " + next.getName());
+        if (crossfadeMs > 0 && surface != null && video.getWidth() > 0) {
+            if (stillBitmap == null) stillBitmap = Bitmap.createBitmap(960, 540, Bitmap.Config.ARGB_8888);
+            try {
+                PixelCopy.request(video, stillBitmap, result -> {
+                    if (result == PixelCopy.SUCCESS && resumed) {
+                        still.setImageBitmap(stillBitmap);
+                        still.animate().cancel();
+                        still.setAlpha(1f);
+                        still.setVisibility(View.VISIBLE);
+                        swapTo(next);
+                    } else {
+                        fadeThroughBlack(next);
+                    }
+                }, new Handler(Looper.getMainLooper()));
+                return;
+            } catch (IllegalArgumentException e) {
+                Log.w(TAG, "no frame to crossfade from", e);
+            }
+        }
+        fadeThroughBlack(next);
+    }
+
+    private void swapTo(File next) {
+        release();
+        prefs.edit().putString(CYCLE_FILE, next.getName()).remove(POSITION).apply();
+        file = next;
+        start();
+    }
+
+    private void fadeThroughBlack(File next) {
         release();
         prefs.edit().putString(CYCLE_FILE, next.getName()).remove(POSITION).apply();
         cover.animate().cancel();
@@ -142,14 +195,19 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         this.file = file;
         this.context = context.getApplicationContext();
         this.cycle = cycle;
-        prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        prefs = LocalProfiles.prefs(context, PREFS);
         FrameLayout.LayoutParams full = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
 
-        SurfaceView video = new SurfaceView(context);
+        video = new SurfaceView(context);
         video.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         video.getHolder().addCallback(this);
         root.addView(video, index, full);
+        still = new ImageView(context);
+        still.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        still.setVisibility(View.GONE);
+        still.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        root.addView(still, ++index, full);
 
         // Top: a light shade under the clock and pills. Bottom: deeper, under the dock and the grid.
         View top = new View(context);
@@ -194,8 +252,15 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
         start();
     }
 
+    private void hideStill() {
+        still.setVisibility(View.GONE);
+        still.setImageDrawable(null);
+    }
+
     void pause() {
         resumed = false;
+        still.animate().cancel();
+        hideStill();
         release();
         cover.animate().cancel();
         cover.setAlpha(1f);
@@ -224,6 +289,11 @@ final class AerialBackdrop implements SurfaceHolder.Callback {
             mp.setOnInfoListener((p, what, extra) -> {
                 if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START && player == p) {
                     cover.animate().alpha(0f).setDuration(700).start();
+                    if (still.getVisibility() == View.VISIBLE) {
+                        still.animate().cancel();
+                        still.animate().alpha(0f).setDuration(crossfadeMs).withLayer()
+                                .withEndAction(this::hideStill).start();
+                    }
                 }
                 return false;
             });

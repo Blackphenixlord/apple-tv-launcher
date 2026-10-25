@@ -48,4 +48,6 @@ jobs:
         run: |
           size=$(stat -c %s launcher/app/build/outputs/apk/release/app-release.apk)
           echo "release APK: $((size / 1024)) KB"
-          test "$size" -lt 409600 || { echo "APK is over 400 KB; the launcher targets 1 GB TVs, keep it small"; exit 1; }
+          # The Apple TV fork bundles the Inter typeface (five weights, ~830 KB), which the original 400 KB limit
+          # predates; 1.6 MB still keeps the launcher small for the 2 GB TVs it targets.
+          test "$size" -lt 1677722 || { echo "APK is over 1.6 MB; keep the launcher small"; exit 1; }

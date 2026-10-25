@@ -7,16 +7,21 @@
 #        [-InputKeyService]   remote's Input button opens the input switcher (Google TV), plus config.xml
 #                             input_key_keycodes and app_keys; re-pass on every install
 #        [-HomeKeyService]    remotes whose Home button sends KEYCODE_ALL_APPS (Xiaomi sticks)
+#        [-FamilyMode]        Google TV with profiles: keep Google TV's launcher enabled and its default Home,
+#                             install for every profile and enable only HomeKeyService (install-family.ps1,
+#                             INSTALL-FAMILY.md). Never disables a package. -Serial <ip:port> for Wireless debugging.
 param(
     [string]$TvHost = $env:TV_HOST,
     [string]$StockLauncher = '',
     [switch]$InputKeyService,
-    [switch]$HomeKeyService
+    [switch]$HomeKeyService,
+    [switch]$FamilyMode,
+    [string]$Serial = ''
 )
 $ErrorActionPreference = 'Stop'
 # Pipe plain UTF-8 to native commands; the default here prepends a BOM that corrupts the first command.
 $OutputEncoding = New-Object System.Text.UTF8Encoding $false
-if (-not $TvHost) { throw 'pass -TvHost <tv ip> or set $env:TV_HOST' }
+if (-not $TvHost -and -not ($FamilyMode -and $Serial)) { throw 'pass -TvHost <tv ip> or set $env:TV_HOST' }
 $env:TV_HOST = $TvHost
 Set-Location $PSScriptRoot
 
@@ -33,6 +38,13 @@ if (-not (Test-Path local.properties)) {
 
 .\gradlew.bat assembleRelease -q --console=plain
 if ($LASTEXITCODE -ne 0) { throw 'Gradle build failed' }
+
+# Family mode: nothing below runs (no stock launcher detection, no disabling, no set-home-activity).
+if ($FamilyMode) {
+    $target = if ($Serial) { $Serial } else { "${TvHost}:5555" }
+    & "$PSScriptRoot\install-family.ps1" -Serial $target -Apk "$PSScriptRoot\app\build\outputs\apk\release\app-release.apk"
+    return
+}
 
 $py = '..\tools\venv\Scripts\python.exe'
 # Which app owns Home differs by build; ask the TV, but only accept a launcher we recognise (the answer

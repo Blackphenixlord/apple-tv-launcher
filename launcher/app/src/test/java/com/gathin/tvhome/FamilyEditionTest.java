@@ -1,0 +1,265 @@
+package com.gathin.tvhome;
+
+import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+/** Plain JVM tests for the family edition's logic: motion levels, the double Home press, profiles, the switcher match. */
+public class FamilyEditionTest {
+
+    // ---- MotionLevel ----
+
+    @Test
+    public void motionDefaultsToFullFromTheStockSwitches() {
+        assertEquals(MotionLevel.FULL, MotionLevel.of(true, false));
+        assertEquals(MotionLevel.REDUCED, MotionLevel.of(true, true));
+        // Animations off wins over reduced motion.
+        assertEquals(MotionLevel.OFF, MotionLevel.of(false, true));
+        assertEquals(MotionLevel.OFF, MotionLevel.of(false, false));
+    }
+
+    @Test
+    public void motionMapsBackOntoTheSwitches() {
+        for (MotionLevel m : MotionLevel.values()) {
+            assertEquals(m, MotionLevel.of(m.animations(), m.reduced()));
+        }
+        assertFalse(MotionLevel.OFF.animations());
+        assertTrue(MotionLevel.REDUCED.reduced());
+        assertFalse(MotionLevel.FULL.reduced());
+    }
+
+    @Test
+    public void motionParsesSavedAndThemeValues() {
+        assertEquals(MotionLevel.FULL, MotionLevel.parse("full", MotionLevel.OFF));
+        assertEquals(MotionLevel.REDUCED, MotionLevel.parse(" Reduced ", MotionLevel.FULL));
+        assertEquals(MotionLevel.OFF, MotionLevel.parse("OFF", MotionLevel.FULL));
+        assertEquals(MotionLevel.OFF, MotionLevel.parse("none", MotionLevel.FULL));
+        assertEquals(MotionLevel.REDUCED, MotionLevel.parse("fast", MotionLevel.REDUCED));
+        assertEquals(MotionLevel.FULL, MotionLevel.parse(null, MotionLevel.FULL));
+        for (MotionLevel m : MotionLevel.values()) assertEquals(m, MotionLevel.parse(m.key(), null));
+    }
+
+    @Test
+    public void motionRowCyclesFullReducedOff() {
+        assertEquals(MotionLevel.REDUCED, MotionLevel.FULL.next());
+        assertEquals(MotionLevel.OFF, MotionLevel.REDUCED.next());
+        assertEquals(MotionLevel.FULL, MotionLevel.OFF.next());
+    }
+
+    // ---- HomePresses ----
+
+    @Test
+    public void singlePressesAreNotDoubles() {
+        HomePresses p = new HomePresses();
+        assertFalse(p.isDoublePress(1_000));
+        assertFalse(p.isDoublePress(1_000 + HomePresses.DOUBLE_PRESS_MS + 1));
+        assertFalse(p.isDoublePress(10_000));
+    }
+
+    @Test
+    public void secondQuickPressIsADouble() {
+        HomePresses p = new HomePresses();
+        assertFalse(p.isDoublePress(5_000));
+        assertTrue(p.isDoublePress(5_000 + HomePresses.DOUBLE_PRESS_MS));
+    }
+
+    @Test
+    public void thirdQuickPressStartsANewPair() {
+        HomePresses p = new HomePresses();
+        assertFalse(p.isDoublePress(0));
+        assertTrue(p.isDoublePress(200));
+        assertFalse(p.isDoublePress(400));
+        assertTrue(p.isDoublePress(600));
+    }
+
+    @Test
+    public void resetForgetsTheFirstPress() {
+        HomePresses p = new HomePresses();
+        assertFalse(p.isDoublePress(0));
+        p.reset();
+        assertFalse(p.isDoublePress(100));
+    }
+
+    @Test
+    public void clockGoingBackwardsIsNotADouble() {
+        HomePresses p = new HomePresses();
+        assertFalse(p.isDoublePress(1_000));
+        assertFalse(p.isDoublePress(900));
+    }
+
+    // ---- FamilyProfiles ----
+
+    @Test
+    public void parsesIdNameAndColour() {
+        List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Arrays.asList("0=Josh|#FF5E3A", "10 = Mom | #34c759", "Alex"));
+        assertEquals(3, ps.size());
+        assertEquals(0, ps.get(0).userId);
+        assertEquals("Josh", ps.get(0).name);
+        assertEquals(0xFFFF5E3A, ps.get(0).color);
+        assertEquals(10, ps.get(1).userId);
+        assertEquals("Mom", ps.get(1).name);
+        assertEquals(0xFF34C759, ps.get(1).color);
+        assertEquals(FamilyProfiles.UNKNOWN_USER, ps.get(2).userId);
+        // No colour given: the palette, in order.
+        assertEquals(FamilyProfiles.PALETTE[2], ps.get(2).color);
+    }
+
+    @Test
+    public void badEntriesAreLeftOutOnTheirOwn() {
+        List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Arrays.asList("", "  ", "11=", "|#FFFFFF", null, "Sam|notacolour"));
+        assertEquals(1, ps.size());
+        assertEquals("Sam", ps.get(0).name);
+        assertEquals(FamilyProfiles.PALETTE[0], ps.get(0).color);
+        assertTrue(FamilyProfiles.parse(null).isEmpty());
+    }
+
+    @Test
+    public void equalsSignWithoutANumberBelongsToTheName() {
+        List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Collections.singletonList("Mr=Smith"));
+        assertEquals("Mr=Smith", ps.get(0).name);
+        assertEquals(FamilyProfiles.UNKNOWN_USER, ps.get(0).userId);
+    }
+
+    @Test
+    public void initials() {
+        assertEquals("J", FamilyProfiles.initial("josh"));
+        assertEquals("É", FamilyProfiles.initial(" élodie"));
+        assertEquals("?", FamilyProfiles.initial(""));
+        assertEquals("?", FamilyProfiles.initial(null));
+        // A whole code point, not half a surrogate pair.
+        assertEquals("🐱", FamilyProfiles.initial("🐱 cat"));
+    }
+
+    @Test
+    public void coloursParse() {
+        assertEquals(Integer.valueOf(0xFF112233), FamilyProfiles.parseColor("#112233"));
+        assertEquals(Integer.valueOf(0x80112233), FamilyProfiles.parseColor("#80112233"));
+        assertNull(FamilyProfiles.parseColor("112233"));
+        assertNull(FamilyProfiles.parseColor("#12345"));
+        assertNull(FamilyProfiles.parseColor("#GG2233"));
+    }
+
+    @Test
+    public void pickerMarksTheProfileOfThisAndroidUser() {
+        List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Arrays.asList("0=Josh", "10=Mom", "11=Alex"));
+        List<FamilyProfiles.Profile> picker = FamilyProfiles.forPicker(ps, 10, "Ignored", "You");
+        assertEquals(3, picker.size());
+        assertEquals("Josh", picker.get(0).name);   // configured order kept
+        assertFalse(picker.get(0).current);
+        assertTrue(picker.get(1).current);
+        assertEquals("Mom", FamilyProfiles.current(picker).name);
+    }
+
+    @Test
+    public void accountProfilesAreMarkedByTheLastPick() {
+        // The TCL G08: Google TV profiles are accounts inside user 0, so ids are not given.
+        List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Arrays.asList("Riley", "Family", "Sam", "Alex"));
+        List<FamilyProfiles.Profile> picker = FamilyProfiles.forPicker(ps, 0, "sam", "You");
+        assertEquals(4, picker.size());
+        assertEquals("Sam", FamilyProfiles.current(picker).name);
+        // Not known yet (Android only says "Owner"): nothing marked, nobody invented.
+        List<FamilyProfiles.Profile> unknown = FamilyProfiles.forPicker(ps, 0, "Owner", "You");
+        assertEquals(4, unknown.size());
+        assertNull(FamilyProfiles.current(unknown));
+        assertNull(FamilyProfiles.current(FamilyProfiles.forPicker(ps, 0, null, "You")));
+    }
+
+    @Test
+    public void withNothingConfiguredThereIsOneProfileForThisUser() {
+        List<FamilyProfiles.Profile> one = FamilyProfiles.forPicker(Collections.emptyList(), 0, "Alex", "You");
+        assertEquals(1, one.size());
+        assertEquals("Alex", one.get(0).name);
+        assertTrue(one.get(0).current);
+        assertEquals("You", FamilyProfiles.forPicker(Collections.emptyList(), 0, null, "You").get(0).name);
+        assertEquals("You", FamilyProfiles.forPicker(Collections.emptyList(), 0, "  ", "You").get(0).name);
+    }
+
+    @Test
+    public void chooserClickTextsMatchWholeNames() {
+        List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Arrays.asList("Riley", "Family", "Sam", "Alex", "Jo"));
+        assertEquals("Alex", FamilyProfiles.matchText(ps, Collections.singletonList("Alex")).name);
+        assertEquals("Sam", FamilyProfiles.matchText(ps, Arrays.asList(null, "Sam, sam.example@example.com")).name);
+        assertEquals("Jo", FamilyProfiles.matchText(ps, Collections.singletonList("jo")).name);
+        // A name inside another word is not a match ("Family" in "familyaccount").
+        assertNull(FamilyProfiles.matchText(ps, Collections.singletonList("familyaccount@example.com")));
+        assertNull(FamilyProfiles.matchText(ps, Collections.singletonList("Add account")));
+        assertNull(FamilyProfiles.matchText(ps, Collections.emptyList()));
+    }
+
+    // ---- LocalProfiles: each person's settings files ----
+
+    @Test
+    public void profileKeysAreFileNameSafe() {
+        assertEquals("alex", LocalProfiles.key("Alex"));
+        assertEquals("mom_dad", LocalProfiles.key("  Mom & Dad! "));
+        assertEquals("élodie", LocalProfiles.key("Élodie"));
+        assertEquals("", LocalProfiles.key("  "));
+        assertEquals("", LocalProfiles.key(null));
+    }
+
+    @Test
+    public void settingsAreScopedPerProfile() {
+        assertEquals("launcher_settings__sam", LocalProfiles.scoped("launcher_settings", "Sam"));
+        assertEquals("order.txt__family", LocalProfiles.scoped("order.txt", "Family"));
+        // No profile picked yet: the original, shared names, exactly as before profiles existed.
+        assertEquals("launcher_settings", LocalProfiles.scoped("launcher_settings", null));
+        assertEquals("order.txt", LocalProfiles.scoped("order.txt", "   "));
+    }
+
+    @Test
+    public void everyPerProfileStoreHasADistinctName() {
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (String p : LocalProfiles.PREFS) assertTrue(p, seen.add(LocalProfiles.scoped(p, "Alex")));
+        for (String f : LocalProfiles.FILES) assertTrue(f, seen.add(LocalProfiles.scoped(f, "Alex")));
+        assertTrue(Arrays.asList(LocalProfiles.FILES).contains(Order.FILE_NAME));
+        assertTrue(Arrays.asList(LocalProfiles.PREFS).contains(Config.SETTINGS_NAME));
+    }
+
+    // ---- SecureSettings and SleepTimer ----
+
+    @Test
+    public void selfHealKeepsOtherAccessibilityServices() {
+        String own = "com.gathin.tvhome/";
+        assertEquals("a.b/.Talk:c.d/.Other",
+                SecureSettings.without("a.b/.Talk:com.gathin.tvhome/.HomeKeyService:c.d/.Other", own));
+        assertEquals("", SecureSettings.without("com.gathin.tvhome/.HomeKeyService", own));
+        assertEquals("", SecureSettings.without(null, own));
+        assertEquals("", SecureSettings.without("null", own));
+        assertEquals("x.y/.Z", SecureSettings.without("::x.y/.Z:", own));
+    }
+
+    @Test
+    public void sleepTimerRoundsUpTheMinutesLeft() {
+        assertEquals(0, SleepTimer.minutesLeft(0, 1_000));
+        assertEquals(0, SleepTimer.minutesLeft(5_000, 5_000));
+        assertEquals(1, SleepTimer.minutesLeft(60_000, 1));
+        assertEquals(30, SleepTimer.minutesLeft(30 * 60_000L, 0));
+        assertEquals(30, SleepTimer.minutesLeft(30 * 60_000L, 1));
+    }
+
+    // ---- ProfileSwitch's match on launcherx activity names ----
+
+    @Test
+    public void switcherNamesScoreAboveTheThreshold() {
+        assertTrue(ProfileSwitch.score("com.google.android.apps.tv.launcherx.profile.ProfileSwitcherActivity") >= ProfileSwitch.MIN_SCORE);
+        assertTrue(ProfileSwitch.score("x.profiles.chooser.ProfileChooserActivity") >= ProfileSwitch.MIN_SCORE);
+        assertTrue(ProfileSwitch.score("x.ProfileSelectionActivity") >= ProfileSwitch.MIN_SCORE);
+        assertTrue(ProfileSwitch.score("x.ProfileSwitcherActivity") > ProfileSwitch.score("x.ProfileChooserActivity"));
+    }
+
+    @Test
+    public void otherProfileScreensDoNot() {
+        assertTrue(ProfileSwitch.score("x.ProfileActivity") < ProfileSwitch.MIN_SCORE);
+        assertTrue(ProfileSwitch.score("x.EditProfileActivity") < ProfileSwitch.MIN_SCORE);
+        assertTrue(ProfileSwitch.score("x.AddProfileChooserActivity") < ProfileSwitch.MIN_SCORE);
+        assertEquals(0, ProfileSwitch.score("x.HomeActivity"));
+        assertEquals(0, ProfileSwitch.score(null));
+    }
+}

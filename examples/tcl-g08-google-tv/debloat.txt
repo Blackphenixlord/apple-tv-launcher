@@ -1,0 +1,29 @@
+# TCL Smart TV Pro (device G08, product G08_4K_US, MediaTek tcl9618), Google TV on Android 14
+# (build UTT2.250416.001 AU14), 2.4 GB RAM. Family edition: Google TV's launcher and setup wizard stay
+# enabled (profiles, Chromecast), so this list is only telemetry, ads, demo and promo leftovers.
+#
+# Apply:   .\launcher\speed-up.ps1 -Serial <tv ip:port>
+# Undo:    .\launcher\speed-up.ps1 -Serial <tv ip:port> -Undo
+# Everything is DISABLED, not uninstalled.
+#
+# Kept on purpose (do not add): com.google.android.apps.mediashell (Chromecast receiver),
+# com.google.android.tungsten.setupwraith (Cast certificate provider), com.google.android.apps.tv.launcherx,
+# com.google.android.tv.remote.service (phone remote), com.google.android.katniss (Assistant), com.tcl.ttvs,
+# com.tcl.tv, com.tcl.tvinput, com.tcl.ui_mediaCenter, com.tcl.gamebar, com.tcl.hearaid, com.tcl.partnercustomizer,
+# com.tcl.UpdatePeripheral. The saved Wi-Fi networks on the tested set belong to android.uid.system.
+
+# Google telemetry and promo installs
+android.autoinstalls.config.google.gtvpai
+com.google.android.feedback
+com.android.tv.feedbackconsent
+# Feeds Google TV home's YouTube rows, not shown while this launcher is in front
+com.google.android.youtube.tv.recommendations
+
+# TCL telemetry, promos, demo and hotel modes
+com.tcl.logkit
+com.tcl.messagebox
+com.tcl.esticker
+com.tcl.exhibit
+com.tcl.hotelmenu
+com.tcl.usercenter
+com.tcl.tv.tclhome_passive

@@ -17,7 +17,7 @@ final class ThemeFiles {
         if (segments == null) return null;
         if (segments.size() == 1) {
             String name = segments.get(0);
-            return Config.FILE_NAME.equals(name) || "wallpaper.jpg".equals(name) || "theme_revision".equals(name)
+            return Config.FILE_NAME.equals(name) || Config.FAMILY_FILE_NAME.equals(name) || "wallpaper.jpg".equals(name) || "theme_revision".equals(name)
                     || NavSound.TICK_FILE.equals(name) || NavSound.POP_FILE.equals(name)
                     || java.util.Arrays.asList(MainActivity.CLOCK_FONT_FILES).contains(name)
                     ? name : null;

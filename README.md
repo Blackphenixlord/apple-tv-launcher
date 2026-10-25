@@ -100,6 +100,15 @@ Two ways, both from a Windows, Mac or Linux computer on the same Wi-Fi as the TV
 | **Time** | About five minutes | About fifteen minutes |
 | **Your dock and hidden apps** | Set on the TV afterwards (Settings → Edit dock) | Built in from the start |
 
+### Family edition: Google TV with profiles
+
+Options A and B disable Google TV's launcher, and Google TV keeps its profiles, the profile switcher and
+Continue Watching inside it. If more than one person uses the TV, follow **[INSTALL-FAMILY.md](INSTALL-FAMILY.md)**
+instead: Google TV stays enabled and stays the default Home, the launcher is installed for every profile, and
+its HomeKeyService opens it on Home (press Home twice for Google TV's home). It adds a "Who's watching?"
+picker that hands over to Google TV's own profile switcher, and a Motion setting (Full / Reduced / Off).
+Nothing is disabled, and `launcher\undo-family.ps1` puts the TV back to stock in one command.
+
 ### Option A: download the APK
 
 **1. Allow the computer on the TV.** Settings → Device Preferences → About → press OK on **Build** seven times.
@@ -340,6 +349,7 @@ BYINTEK, JMGO, Portronics, Stellamore, Wanbo and XGIMI projectors
 | TCL Smart TV (G07, G07_4K_GB_NF, Realtek RTD2851A, 2 GB) | Google TV 11 |
 | TCL Smart TV Pro (G03, G03_4K_GB, BeyondTV4, Realtek R51MT05, V8-R51MT05-LF1V620), Middle East firmware | Google TV 11 |
 | TCL Smart TV Pro (G05, G05_4K_US, MediaTek MT5889) | Google TV 11 |
+| TCL Smart TV Pro (G08, G08_4K_US, MediaTek tcl9618, 2.4 GB) | Google TV 14 |
 | TCL Smart TV Pro (G09, G09_4K_GB, Amlogic T5M, 2 GB), UK firmware, Brazil | Google TV 12 |
 | TCL UnionTV, Latin America (TCL-built like Thomson 32HE5800, Realtek RT2841) | Android TV 9 |
 | Tele System TS ON T2/HD (ONT2HD, SDMC, Amlogic), Italy | Android TV 11 |

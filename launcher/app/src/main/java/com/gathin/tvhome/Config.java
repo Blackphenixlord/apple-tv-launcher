@@ -34,6 +34,8 @@ final class Config {
     static final String FILE_NAME = "config.json";
     static final String WALLPAPER_NAME = "wallpaper.jpg";
     static final String SETTINGS_NAME = "launcher_settings";
+    /** Family profiles for the picker, next to config.json; see FamilyProfiles and install-family.ps1. */
+    static final String FAMILY_FILE_NAME = "family.json";
     static final String ROWS_BELOW_DOCK_KEY = "rows_below_dock";
     static final String WALLPAPER_CHOICE_KEY = "wallpaper_choice";
     private static final String THEME_REVISION_NAME = "theme_revision";
@@ -104,6 +106,10 @@ final class Config {
     final List<RaceWeekend.Race> raceCalendar;
     /** Cinematic top shelf (config.xml, cinematic_home): the focused dock app's artwork behind a larger shelf. */
     final boolean cinematicHome;
+    /** The family's Google TV profiles for the "Who's watching?" picker (config.xml family_profiles; see FamilyProfiles). */
+    final List<String> familyProfiles;
+    /** Google TV's profile switcher, "package/.Activity" or an intent action; empty to look for it (see ProfileSwitch). */
+    final String profileSwitcher;
 
     private Config(List<String> dockApps, boolean fillDock, List<String> hiddenApps, String liveTvPackage,
                    String liveTvAction, Map<String, String> launchActions, Map<String, String> appLabels,
@@ -114,7 +120,10 @@ final class Config {
                    int[] settingsKeycodes, boolean settingsKeyPanel, boolean wallpaperEnabled, File wallpaper, List<File> wallpapers,
                    int wallpaperRotationMinutes, int wallpaperDim, boolean overlayApplied,
                    Festival festival, int[] inputKeycodes, List<String> appKeys,
-                   List<RaceWeekend.Race> raceCalendar, boolean cinematicHome) {
+                   List<RaceWeekend.Race> raceCalendar, boolean cinematicHome,
+                   List<String> familyProfiles, String profileSwitcher) {
+        this.familyProfiles = Collections.unmodifiableList(familyProfiles);
+        this.profileSwitcher = profileSwitcher;
         this.inputKeycodes = inputKeycodes;
         this.appKeys = Collections.unmodifiableList(appKeys);
         this.dockApps = Collections.unmodifiableList(dockApps);
@@ -198,6 +207,9 @@ final class Config {
         int[] inputKeycodes = res.getIntArray(R.array.input_key_keycodes);
         List<String> appKeys = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.app_keys)));
         boolean cinematic = res.getBoolean(R.bool.cinematic_home);
+        List<String> familyProfiles = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.family_profiles)));
+        String profileSwitcher = res.getString(R.string.profile_switcher).trim();
+        String motion = null;
         boolean applied = false;
 
         File dir = dir(ctx);
@@ -238,10 +250,26 @@ final class Config {
             inputKeycodes = intArray(json, "input_key_keycodes", inputKeycodes);
             appKeys = stringList(json, "app_keys", appKeys);
             cinematic = bool(json, "cinematic_home", cinematic);
+            familyProfiles = stringList(json, "family_profiles", familyProfiles);
+            profileSwitcher = string(json, "profile_switcher", profileSwitcher).trim();
+            motion = string(json, MotionLevel.KEY, null);
+        }
+        // family.json, written per profile by install-family.ps1 from pm list users: the family's names
+        // for the "Who's watching?" picker. Kept apart from config.json so a theme push leaves it alone.
+        JSONObject family = read(dir != null ? new File(dir, FAMILY_FILE_NAME) : null);
+        if (family != null) {
+            familyProfiles = stringList(family, "family_profiles", familyProfiles);
+            profileSwitcher = string(family, "profile_switcher", profileSwitcher).trim();
+        }
+        // A theme's "motion" stands for both older switches at once.
+        if (motion != null) {
+            MotionLevel m = MotionLevel.parse(motion, MotionLevel.of(animations, reducedMotion));
+            animations = m.animations();
+            reducedMotion = m.reduced();
         }
         // A theme push or reset invalidates choices made on the TV. On first use, remember the
         // current theme without clearing choices from an older launcher version.
-        SharedPreferences choices = ctx.getSharedPreferences(SETTINGS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences choices = LocalProfiles.prefs(ctx, SETTINGS_NAME);
         syncThemeChoices(choices, dir, file);
         int chosenColumns = choices.getInt("columns", columns);
         if (chosenColumns >= 4 && chosenColumns <= 7) columns = chosenColumns;
@@ -249,6 +277,13 @@ final class Config {
         if (chosenRows >= 0 && chosenRows <= 3) rowsBelow = chosenRows;
         animations = choices.getBoolean("animations", animations);
         advancedEffects = choices.getBoolean("advanced_effects", advancedEffects);
+        // Launcher settings, Motion (Full / Reduced / Off), chosen on the TV: wins over the theme.
+        String chosenMotion = choices.getString(MotionLevel.KEY, null);
+        if (chosenMotion != null) {
+            MotionLevel m = MotionLevel.parse(chosenMotion, MotionLevel.of(animations, reducedMotion));
+            animations = m.animations();
+            reducedMotion = m.reduced();
+        }
         File wallpaper = dir != null ? new File(dir, WALLPAPER_NAME) : null;
         if (wallpaper != null && !(wallpaper.isFile() && wallpaper.length() > 0)) wallpaper = null;
         // A theme can also switch the wallpaper off while the file is still there.
@@ -291,7 +326,8 @@ final class Config {
                 shamsi, greetingName, moduleCards, reducedMotion, dockTitle, dockRow, reorderButton, vpn, homeSettings, showStats, library, background,
                 Math.max(0, Math.min(100, skyIntensity)), settingsKeycodes, settingsKeyPanel, wallpaperEnabled, wallpaper,
                 wallpapers, rotationMinutes, wallpaperDim, applied,
-                festival, inputKeycodes, appKeys, json == null ? Collections.emptyList() : raceCalendar(json), cinematic);
+                festival, inputKeycodes, appKeys, json == null ? Collections.emptyList() : raceCalendar(json), cinematic,
+                familyProfiles, profileSwitcher);
     }
 
     /**
@@ -333,11 +369,11 @@ final class Config {
             // Existing preferences survive an app upgrade, unless the first launch follows an
             // explicit theme push or reset by the updated tools.
             SharedPreferences.Editor editor = choices.edit();
-            if (!"absent".equals(token)) editor.remove("columns").remove("animations")
+            if (!"absent".equals(token)) editor.remove("columns").remove("animations").remove(MotionLevel.KEY)
                     .remove("advanced_effects").remove(ROWS_BELOW_DOCK_KEY).remove(WALLPAPER_CHOICE_KEY);
             editor.putString(THEME_SIGNATURE_KEY, signature).commit();
         } else if (!seen.equals(signature)) {
-            choices.edit().remove("columns").remove("animations").remove("advanced_effects")
+            choices.edit().remove("columns").remove("animations").remove(MotionLevel.KEY).remove("advanced_effects")
                     .remove(ROWS_BELOW_DOCK_KEY).remove(WALLPAPER_CHOICE_KEY)
                     .putString(THEME_SIGNATURE_KEY, signature).commit();
         }
