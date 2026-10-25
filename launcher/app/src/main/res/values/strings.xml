@@ -142,4 +142,18 @@
     <!-- Cinematic top shelf (cinematic_home): the line under the focused dock app's name; %1$s is when it was
          last opened, e.g. "5 minutes ago" or "yesterday, 9:40 pm". -->
     <string name="last_opened">Last opened %1$s</string>
+    <!-- Family edition -->
+    <string name="whos_watching">Who\'s watching?</string>
+    <string name="profile_button">Profile: %1$s</string>
+    <string name="profile_watching_now">Watching now</string>
+    <string name="profile_default_name">You</string>
+    <string name="profile_picker_hint">Switching opens Google TV\'s profile screen</string>
+    <string name="profile_switch_hint">Google TV home is open. Press Up, select the profile picture at the top right, then choose %1$s.</string>
+    <string name="profile_switch_unavailable">Google TV\'s profile switcher could not be opened on this TV.</string>
+    <string name="motion_state">Motion: %1$s</string>
+    <string name="motion">Motion</string>
+    <string name="motion_full">Full</string>
+    <string name="motion_reduced">Reduced</string>
+    <string name="motion_off">Off</string>
+    <string name="google_home">Google TV home</string>
 </resources>

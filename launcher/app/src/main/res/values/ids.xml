@@ -7,4 +7,8 @@
     <item name="motion_rot_x" type="id" />
     <item name="motion_rot_y" type="id" />
     <item name="motion_tx" type="id" />
+    <!-- Full motion: the focus springs (TvFocusMotion), kept on the view so a fast run of presses retargets them. -->
+    <item name="spring_scale_x" type="id" />
+    <item name="spring_scale_y" type="id" />
+    <item name="spring_lift" type="id" />
 </resources>

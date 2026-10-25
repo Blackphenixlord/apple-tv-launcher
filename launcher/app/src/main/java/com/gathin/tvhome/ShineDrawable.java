@@ -57,6 +57,13 @@ final class ShineDrawable extends Drawable {
         canvas.restoreToCount(save);
     }
 
+    /** Both at once and unboxed, for the per-frame shine drift (TvFocusMotion.shimmer). */
+    void setShine(float x, float y) {
+        shineX = x;
+        shineY = y;
+        invalidateSelf();
+    }
+
     @Override public void setAlpha(int a) { alpha = a; invalidateSelf(); }
     @Override public int getAlpha() { return alpha; }
     @Override public void setColorFilter(ColorFilter cf) { }

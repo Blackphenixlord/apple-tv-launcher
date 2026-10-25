@@ -218,6 +218,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private AppLibraryDialog appLibrary;
     private boolean libraryFocusPending;
     private RecyclerView.OnScrollListener pendingFocusScroll;
+    /** Family edition: the profile avatar in the top bar and the "Who's watching?" picker it opens. */
+    private TextView btnProfile;
+    private ProfilePicker profilePicker;
+    private List<FamilyProfiles.Profile> familyProfiles = Collections.emptyList();
+    /** Settings, Motion: Full / Reduced / Off (the same as animations and reducedMotion together). */
+    private MotionLevel motion = MotionLevel.FULL;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     /** Refreshes the network pill when the connection changes: at boot Wi-Fi often connects after Home is shown. */
@@ -292,6 +298,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         animations = cfg.animations;
         advancedEffects = cfg.animations && cfg.advancedEffects;
         reducedMotion = cfg.reducedMotion;
+        motion = MotionLevel.of(animations, reducedMotion);
+        TvFocusMotion.springs = motion == MotionLevel.FULL;
         dockRow = cfg.dockRow;
         festival = cfg.festival;
         festive = festival.active(LocalDate.now());
@@ -309,6 +317,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // The Background menu's pick, else config.xml's aerial_backdrop.
         aerial = AerialBackdrop.attach(this, root, root.indexOfChild(sky),
                 AerialBackdrop.chosen(this, getString(R.string.aerial_backdrop)), cfg.backgroundColor);
+        // Cycling aerials crossfade (Settings, Motion): long and soft on Full, short on Reduced, a cut through black on Off.
+        if (aerial != null) aerial.setCrossfadeMs(motion == MotionLevel.FULL ? 1200 : motion == MotionLevel.REDUCED ? 500 : 0);
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);
         navSound = new NavSound(this);
@@ -545,6 +555,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         btnReorder = findViewById(R.id.btnReorder);
         btnReorder.setOnClickListener(v -> toggleReorder());
+        setUpProfileButton(cfg);
         reorderButtonEnabled = cfg.reorderButton;
         applyTopButtons();
         btnSettings.setOnLongClickListener(v -> {
@@ -582,6 +593,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnWifi.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
         btnReorder.setOnKeyListener(pillKeys);
+        if (btnProfile != null) btnProfile.setOnKeyListener(pillKeys);
         if (btnMute != null) btnMute.setOnKeyListener(pillKeys);
         if (clockBlock != null) {
             clockBlock.setOnKeyListener(pillKeys);
@@ -589,7 +601,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (animations && !reducedMotion) {
             // The round buttons move like the app icons: lift, lean and settle, and the highlight.
-            for (View button : new View[]{btnMute, btnReorder, btnInputs, btnSettings, clockBlock}) {
+            for (View button : new View[]{btnMute, btnReorder, btnInputs, btnSettings, btnProfile, clockBlock}) {
                 if (button == null) continue;
                 button.setForeground(new ShineDrawable());
                 button.setClipToOutline(true);   // the highlight stays inside the circle
@@ -672,6 +684,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         promptsPaused = false;
+        // Family mode: this launcher is in front again, so Google's home no longer counts as asked for.
+        FamilyHome.googleHomeRequested = false;
         if (rebuildOnResume) {
             tilesReady = false;
             reloadApps(true);
@@ -796,6 +810,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (cardPrompt != null) cardPrompt.dismiss();
         if (appLibrary != null) appLibrary.close();
         if (openPopup != null) openPopup.dismiss();
+        if (profilePicker != null && profilePicker.isShowing()) profilePicker.dismiss();
+        TvFocusMotion.stopShimmer();
     }
 
     @Override
@@ -1026,7 +1042,24 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return pos != RecyclerView.NO_POSITION && movingKey.equals(adapter.keyAt(pos)) ? 1f : 0.45f;
         }
         if (dockEditSlot >= 0 && pos >= 0 && pos < COLUMNS && pos != dockEditSlot) return 0.45f;
+        if (dockFaded && pos >= 0 && pos < COLUMNS) return DOCK_FADED_ALPHA;
         return 1f;
+    }
+
+    /** Full motion: the dock fades back while focus is in the app rows below it, as it slides up out of the way. */
+    private static final float DOCK_FADED_ALPHA = 0.5f;
+    private boolean dockFaded;
+
+    private void fadeDock(boolean faded) {
+        if (faded == dockFaded) return;
+        dockFaded = faded;
+        for (int i = 0; i < grid.getChildCount(); i++) {
+            View item = grid.getChildAt(i);
+            int pos = grid.getChildAdapterPosition(item);
+            if (pos < 0 || pos >= COLUMNS) continue;
+            item.animate().alpha(tileAlpha(pos)).setDuration(faded ? 380 : 260)
+                    .setInterpolator(SCROLL_EASE).withLayer().start();
+        }
     }
 
     /** Ends the mode and saves the order if it changed since the mode started. */
@@ -1195,6 +1228,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
         if (aerial != null) aerial.setGridFocused(dockRow && position >= COLUMNS);
+        if (motion == MotionLevel.FULL) fadeDock(dockRow && position >= COLUMNS && movingKey == null && dockEditSlot < 0);
         // Focus restored before the first layout (cold start): the tile has no size yet, and the glass
         // would be sized to 2*pad. Run again once the tile is laid out.
         if (card.getWidth() == 0) {
@@ -2551,6 +2585,56 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         rows.getChildAt(Math.min(focusRow, rows.getChildCount() - 1)).requestFocus();
     }
 
+    // ---- family edition: profiles and motion ---------------------------------------------------------
+
+    /**
+     * The top bar's avatar: the current Google TV profile's initial on its colour. Its name comes from
+     * family.json (install-family.ps1), else from Android where it allows an app to ask, else "You".
+     */
+    private void setUpProfileButton(Config cfg) {
+        btnProfile = findViewById(R.id.btnProfile);
+        if (btnProfile == null) return;   // a layout without one (Hebrew)
+        familyProfiles = FamilyProfiles.forPicker(FamilyProfiles.parse(cfg.familyProfiles), FamilyHome.userId(),
+                FamilyHome.systemUserName(this), getString(R.string.profile_default_name));
+        FamilyProfiles.Profile me = familyProfiles.get(0);
+        btnProfile.setText(me.initial());
+        btnProfile.setBackground(ProfilePicker.avatarBackground(me.color, density, 2));
+        btnProfile.setContentDescription(getString(R.string.profile_button, me.name));
+        btnProfile.setOnClickListener(v -> showProfilePicker());
+        profilePicker = new ProfilePicker(this, root, motion, cfg.profileSwitcher);
+    }
+
+    private void showProfilePicker() {
+        if (profilePicker == null) return;
+        if (openPopup != null) openPopup.dismiss();
+        profilePicker.show(familyProfiles);
+    }
+
+    private static int motionLabel(MotionLevel m) {
+        return m == MotionLevel.FULL ? R.string.motion_full : m == MotionLevel.REDUCED ? R.string.motion_reduced : R.string.motion_off;
+    }
+
+    /** Settings menu, Motion: Full, Reduced or Off. Saved with the launcher's other on-TV choices; Home rebuilds. */
+    private void showMotionMenu() {
+        View anchor = findViewById(R.id.btnSettings);
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (240 * density));
+        for (MotionLevel m : MotionLevel.values()) {
+            View r = addSettingsMenuRow(rows, popup, getString(motionLabel(m)), () -> {
+                if (m == motion) return;
+                getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).edit().putString(MotionLevel.KEY, m.key()).apply();
+                recreate();
+            });
+            View dot = r.findViewById(R.id.dot);
+            dot.setVisibility(m == motion ? View.VISIBLE : View.GONE);
+        }
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (240 * density), panel.getMeasuredWidth()));
+        dropIn(popup, panel, anchor, Gravity.END);
+        rows.getChildAt(motion.ordinal()).requestFocus();
+    }
+
     /**
      * Settings menu, Background: every aerial on the TV, the one playing marked. Picking one keeps it (AerialBackdrop.choose)
      * and rebuilds Home, which starts the new flight.
@@ -2734,6 +2818,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         addSettingsMenuRow(rows, popup, R.string.background, this::showBackgroundMenu);
         addSettingsMenuRow(rows, popup, R.string.top_buttons, () -> showTopButtonsMenu(0));
         addSettingsMenuRow(rows, popup, R.string.sounds, () -> showSoundsMenu(0));
+        addSettingsMenuRow(rows, popup, getString(R.string.motion_state, getString(motionLabel(motion))),
+                () -> showMotionMenu());
+        if (btnProfile != null) addSettingsMenuRow(rows, popup, R.string.whos_watching, this::showProfilePicker);
+        // Family mode: Google TV's own home, the same as a double Home press.
+        if (FamilyHome.isFamilyMode(this) && FamilyHome.googleHome(this) != null) {
+            addSettingsMenuRow(rows, popup, R.string.google_home, () -> FamilyHome.openGoogleHome(this));
+        }
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));

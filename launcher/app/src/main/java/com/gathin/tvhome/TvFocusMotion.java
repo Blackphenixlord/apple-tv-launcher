@@ -4,11 +4,16 @@ import android.animation.Animator;
 import android.animation.Keyframe;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
+import android.animation.ValueAnimator;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.view.animation.PathInterpolator;
+
+import androidx.dynamicanimation.animation.DynamicAnimation;
+import androidx.dynamicanimation.animation.SpringAnimation;
+import androidx.dynamicanimation.animation.SpringForce;
 
 /**
  * The tvOS focus engine's motion for one icon, with no highlight box: the icon itself is the focus.
@@ -24,6 +29,12 @@ import android.view.animation.PathInterpolator;
  *
  * Every animation starts from the view's current values and cancels the one before it, so a fast run of
  * key presses retargets smoothly instead of stacking or restarting. The scale runs on a hardware layer.
+ *
+ * Full motion ({@link #springs}): the scale and the lift are springs instead of timed curves, so the icon
+ * overshoots a touch and settles naturally, and a press mid-move carries its velocity into the next target.
+ * Once it has settled, the highlight keeps drifting slowly over the focused icon ({@link #shimmer}), the
+ * tvOS "light moving over the glass". The springs live on the view (one set per tile, made once), and the
+ * drift is one animator for the whole launcher, so nothing is allocated per frame.
  */
 final class TvFocusMotion {
     private TvFocusMotion() { }
@@ -41,6 +52,16 @@ final class TvFocusMotion {
     private static final Interpolator FOCUS_EASE = new PathInterpolator(0.25f, 1f, 0.5f, 1f);
     private static final Interpolator UNFOCUS_EASE = new DecelerateInterpolator(1.5f);
     private static final Interpolator SETTLE_EASE = new DecelerateInterpolator(1.8f);
+
+    /** Full motion: springs for scale and lift, and the idle shine drift. Set by MainActivity from Settings, Motion. */
+    static boolean springs;
+
+    /** Focus: a little overshoot (about 8% of the growth) and a natural settle in ~350 ms. */
+    private static final float FOCUS_STIFFNESS = 380f;
+    private static final float FOCUS_DAMPING = 0.62f;
+    /** Losing focus: settles without bouncing below its resting size. */
+    private static final float UNFOCUS_STIFFNESS = 520f;
+    private static final float UNFOCUS_DAMPING = 1f;
 
     /** The last D-pad direction, set by MainActivity.dispatchKeyEvent; 0 when focus did not move by key. */
     static int lastDirection;
@@ -83,11 +104,18 @@ final class TvFocusMotion {
         Object nudge = card.getTag(R.id.motion_tx);
         if (nudge instanceof Animator) ((Animator) nudge).cancel();
         card.setTag(R.id.motion_scale_y, restX);   // where a bump at the row's end springs back to
-        card.animate().scaleX(s).scaleY(s).translationX(restX)
-                .translationY(focused ? -LIFT_DP * density : 0f)
-                .translationZ(focused ? ELEVATION_DP * density : 0f)
-                .setDuration(ms).setInterpolator(ease).setStartDelay(0)
-                .withLayer().start();
+        if (springs) {
+            card.animate().translationX(restX)
+                    .translationZ(focused ? ELEVATION_DP * density : 0f)
+                    .setDuration(ms).setInterpolator(ease).setStartDelay(0).start();
+            springTo(card, s, focused ? -LIFT_DP * density : 0f, focused);
+        } else {
+            card.animate().scaleX(s).scaleY(s).translationX(restX)
+                    .translationY(focused ? -LIFT_DP * density : 0f)
+                    .translationZ(focused ? ELEVATION_DP * density : 0f)
+                    .setDuration(ms).setInterpolator(ease).setStartDelay(0)
+                    .withLayer().start();
+        }
 
         // Lean direction: the icon tips towards the way focus moved; the artwork and the light follow that edge.
         float rx = 0f, ry = 0f, dx = 0f, dy = 0f;
@@ -171,6 +199,8 @@ final class TvFocusMotion {
         }
         button.setTag(R.id.motion_scale_x, a);
         a.start();
+        if (springs && focused) shimmer(null, shine, w, h);
+        else if (shine == shimmerDrawable) stopShimmer();
     }
 
     /** Lean to (rx, ry) and settle level in one interruptible keyframed animation; unfocus just levels out. */
@@ -211,6 +241,7 @@ final class TvFocusMotion {
         Object prev = glare.getTag(R.id.motion_tx);
         if (prev instanceof Animator) ((Animator) prev).cancel();
         if (!focused) {
+            if (glare == shimmerView) stopShimmer();
             glare.animate().alpha(0f).setDuration(150).setInterpolator(UNFOCUS_EASE).start();
             return;
         }
@@ -229,6 +260,7 @@ final class TvFocusMotion {
         a.setInterpolator(SETTLE_EASE);
         glare.setTag(R.id.motion_tx, a);
         a.start();
+        if (springs) shimmer(s, null, w, h);
     }
 
     /** Snap to the resting state of a (re)bound tile without animating. */
@@ -237,6 +269,8 @@ final class TvFocusMotion {
     }
 
     static void set(View card, View banner, View glare, boolean focused, float density, float shiftX) {
+        cancelSprings(card);
+        if (glare == shimmerView) stopShimmer();
         card.animate().cancel();
         banner.animate().cancel();
         glare.animate().cancel();
@@ -281,5 +315,128 @@ final class TvFocusMotion {
         a.setDuration(300);
         card.setTag(R.id.motion_tx, a);
         a.start();
+    }
+
+    // ---- Full motion: springs ---------------------------------------------------------------------------
+
+    /** Scale (both axes) and lift towards their targets on the view's own springs, made on first use. */
+    private static void springTo(View card, float scale, float lift, boolean focused) {
+        SpringAnimation sx = spring(card, R.id.spring_scale_x, DynamicAnimation.SCALE_X);
+        SpringAnimation sy = spring(card, R.id.spring_scale_y, DynamicAnimation.SCALE_Y);
+        SpringAnimation ty = spring(card, R.id.spring_lift, DynamicAnimation.TRANSLATION_Y);
+        float stiffness = focused ? FOCUS_STIFFNESS : UNFOCUS_STIFFNESS;
+        float damping = focused ? FOCUS_DAMPING : UNFOCUS_DAMPING;
+        // The scale is drawn from a hardware layer while it moves, as withLayer() does for the timed curve.
+        if (card.getLayerType() != View.LAYER_TYPE_HARDWARE) card.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        sx.getSpring().setStiffness(stiffness).setDampingRatio(damping);
+        sy.getSpring().setStiffness(stiffness).setDampingRatio(damping);
+        ty.getSpring().setStiffness(stiffness).setDampingRatio(damping);
+        sx.animateToFinalPosition(scale);
+        sy.animateToFinalPosition(scale);
+        ty.animateToFinalPosition(lift);
+    }
+
+    private static SpringAnimation spring(View card, int tag, DynamicAnimation.ViewProperty property) {
+        Object o = card.getTag(tag);
+        if (o instanceof SpringAnimation) return (SpringAnimation) o;
+        SpringAnimation a = new SpringAnimation(card, property);
+        a.setSpring(new SpringForce());
+        if (property != DynamicAnimation.TRANSLATION_Y) a.setMinimumVisibleChange(DynamicAnimation.MIN_VISIBLE_CHANGE_SCALE);
+        // Drop the layer once all three have settled.
+        a.addEndListener((anim, canceled, value, velocity) -> {
+            if (!running(card, R.id.spring_scale_x) && !running(card, R.id.spring_scale_y)
+                    && !running(card, R.id.spring_lift)) {
+                card.setLayerType(View.LAYER_TYPE_NONE, null);
+            }
+        });
+        card.setTag(tag, a);
+        return a;
+    }
+
+    private static boolean running(View card, int tag) {
+        Object o = card.getTag(tag);
+        return o instanceof SpringAnimation && ((SpringAnimation) o).isRunning();
+    }
+
+    private static void cancelSprings(View card) {
+        cancelSpring(card, R.id.spring_scale_x);
+        cancelSpring(card, R.id.spring_scale_y);
+        cancelSpring(card, R.id.spring_lift);
+    }
+
+    private static void cancelSpring(View card, int tag) {
+        Object o = card.getTag(tag);
+        if (o instanceof SpringAnimation) ((SpringAnimation) o).cancel();
+    }
+
+    // ---- Full motion: the shine drifting over the focused icon ------------------------------------------
+
+    private static final long SHIMMER_PERIOD_MS = 6000;
+    private static ValueAnimator shimmer;
+    private static ShineView shimmerView;
+    private static ShineDrawable shimmerDrawable;
+    private static float shimmerW, shimmerH;
+
+    /**
+     * After the lean has settled, the highlight circles slowly near the top of the focused icon or button:
+     * one animator for the whole launcher, moved to whatever has focus, so nothing is made per frame.
+     */
+    private static void shimmer(ShineView view, ShineDrawable drawable, int w, int h) {
+        if (shimmer == null) {
+            shimmer = ValueAnimator.ofFloat(0f, 1f);
+            shimmer.setDuration(SHIMMER_PERIOD_MS);
+            shimmer.setRepeatCount(ValueAnimator.INFINITE);
+            shimmer.setInterpolator(null);   // linear: the motion itself is a circle
+            shimmer.addUpdateListener(a -> {
+                double t = a.getAnimatedFraction() * 2 * Math.PI;
+                // Starts where the lean's own highlight came to rest (0, -0.22h) and circles round from there.
+                float x = (float) Math.sin(t) * shimmerW * 0.16f;
+                float y = -shimmerH * 0.22f + (float) (1 - Math.cos(t)) * shimmerH * 0.06f;
+                if (shimmerView != null) {
+                    shimmerView.setShineX(x);
+                    shimmerView.setShineY(y);
+                } else if (shimmerDrawable != null) {
+                    shimmerDrawable.setShine(x, y);
+                }
+            });
+        }
+        shimmer.cancel();
+        shimmerView = view;
+        shimmerDrawable = drawable;
+        shimmerW = w;
+        shimmerH = h;
+        shimmer.setStartDelay(TILT_MS);   // after the lean's highlight has settled
+        shimmer.start();
+    }
+
+    static void stopShimmer() {
+        if (shimmer != null) shimmer.cancel();
+        shimmerView = null;
+        shimmerDrawable = null;
+    }
+
+    // ---- launching an app ------------------------------------------------------------------------------
+
+    private static final float LAUNCH_SCALE = 1.34f;
+    private static final long LAUNCH_MS = 180;
+
+    /**
+     * The icon swells towards the viewer as its app opens; the app's window grows out of the icon's bounds
+     * (ActivityOptions.makeScaleUpAnimation, set by the caller). The tile goes back to its focused size once
+     * the app covers Home, so it is right if Home comes back without a rebuild.
+     */
+    static void launchZoom(View card) {
+        cancelSprings(card);
+        if (card.getForeground() == shimmerDrawable) stopShimmer();
+        card.animate().cancel();
+        card.animate().scaleX(LAUNCH_SCALE).scaleY(LAUNCH_SCALE)
+                .setDuration(LAUNCH_MS).setInterpolator(FOCUS_EASE).setStartDelay(0)
+                .withLayer()
+                .withEndAction(() -> card.postDelayed(() -> {
+                    float s = card.isFocused() ? SCALE : 1f;
+                    card.setScaleX(s);
+                    card.setScaleY(s);
+                }, 600))
+                .start();
     }
 }

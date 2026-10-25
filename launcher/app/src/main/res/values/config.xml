@@ -163,4 +163,16 @@
          dots, the focus glow takes the app's colour and the dock band turns translucent. false keeps the plain
          shelf. Can also be set with "cinematic_home": true in a theme's config.json. -->
     <bool name="cinematic_home">false</bool>
+
+    <!-- Family edition. "Who's watching?" lists these Google TV profiles, one per entry:
+         "<android user id>=<name>|<#RRGGBB>", e.g. "0=Josh|#FF5E3A", "10=Mom|#34C759". The id is the
+         number pm list users shows for the profile; id and colour are optional. Normally left empty here:
+         launcher/install-family.ps1 writes family.json on the TV from the TV's own profile names, and that
+         wins. A theme's config.json can set "family_profiles" too. -->
+    <string-array name="family_profiles" translatable="false" />
+
+    <!-- Google TV's own profile switcher, as "package/.Activity" or an intent action, for the picker to hand
+         over to. Empty: ProfileSwitch looks for one, and falls back to Google's home with directions. Also
+         settable as "profile_switcher" in family.json or a theme. -->
+    <string name="profile_switcher" translatable="false"></string>
 </resources>

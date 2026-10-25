@@ -27,6 +27,8 @@ public final class LauncherSettingsActivity extends Activity {
     private int rowsBelowDock;
     private boolean animations;
     private boolean advancedEffects;
+    /** Motion: Full / Reduced / Off, which sets animations and reduced motion together. */
+    private MotionLevel motion;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -38,6 +40,7 @@ public final class LauncherSettingsActivity extends Activity {
         rowsBelowDock = config.rowsBelowDock;
         animations = config.animations;
         advancedEffects = config.animations && config.advancedEffects;
+        motion = MotionLevel.of(config.animations, config.reducedMotion);
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -73,9 +76,10 @@ public final class LauncherSettingsActivity extends Activity {
         wallpaperChoice.setOnClickListener(v -> showWallpaperPicker());
         animationsChoice = findViewById(R.id.animationsChoice);
         animationsChoice.setOnClickListener(v -> {
-            animations = !animations;
+            motion = motion.next();
+            animations = motion.animations();
             if (!animations) advancedEffects = false;
-            choices.edit().putBoolean("animations", animations)
+            choices.edit().putString(MotionLevel.KEY, motion.key()).putBoolean("animations", animations)
                     .putBoolean("advanced_effects", advancedEffects).apply();
             setResult(RESULT_OK);
             refresh();
@@ -96,13 +100,14 @@ public final class LauncherSettingsActivity extends Activity {
         followThemeChoice = findViewById(R.id.followThemeChoice);
         followThemeChoice.setOnClickListener(v -> {
             if (!hasOnTvChoices()) return;
-            choices.edit().remove("columns").remove(Config.ROWS_BELOW_DOCK_KEY).remove("animations")
+            choices.edit().remove("columns").remove(Config.ROWS_BELOW_DOCK_KEY).remove("animations").remove(MotionLevel.KEY)
                     .remove("advanced_effects").remove(Config.WALLPAPER_CHOICE_KEY).commit();
             Config current = Config.load(this);
             columns = current.columns;
             rowsBelowDock = current.rowsBelowDock;
             animations = current.animations;
             advancedEffects = current.animations && current.advancedEffects;
+            motion = MotionLevel.of(current.animations, current.reducedMotion);
             setResult(RESULT_OK);
             refresh();
         });
@@ -180,8 +185,9 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < rowChoices.length; i++) {
             rowChoices[i].setSelected(rowsBelowDock == i);
         }
-        animationsChoice.setText(getString(R.string.animations_state,
-                getString(animations ? R.string.on : R.string.off)));
+        animationsChoice.setText(getString(R.string.motion_state, getString(
+                motion == MotionLevel.FULL ? R.string.motion_full
+                        : motion == MotionLevel.REDUCED ? R.string.motion_reduced : R.string.motion_off)));
         advancedChoice.setText(getString(R.string.advanced_effects_state,
                 getString(advancedEffects ? R.string.on : R.string.off)));
         advancedChoice.setEnabled(animations);
@@ -196,7 +202,7 @@ public final class LauncherSettingsActivity extends Activity {
 
     private boolean hasOnTvChoices() {
         return choices.contains("columns") || choices.contains(Config.ROWS_BELOW_DOCK_KEY)
-                || choices.contains("animations") || choices.contains("advanced_effects")
+                || choices.contains("animations") || choices.contains(MotionLevel.KEY) || choices.contains("advanced_effects")
                 || choices.contains(Config.WALLPAPER_CHOICE_KEY);
     }
 
