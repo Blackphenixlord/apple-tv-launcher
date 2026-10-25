@@ -1,5 +1,6 @@
 package com.gathin.tvhome;
 
+import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -149,6 +150,7 @@ final class FamilyHome {
      * What Android calls this user, where it lets an ordinary app ask (Android 13 and newer answer for the
      * calling user without MANAGE_USERS on most builds); null when it refuses.
      */
+    @SuppressLint("MissingPermission")   // asked without the permission on purpose; a refusal is caught below
     static String systemUserName(Context ctx) {
         try {
             UserManager um = ctx.getSystemService(UserManager.class);

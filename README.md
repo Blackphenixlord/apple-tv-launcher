@@ -100,6 +100,15 @@ Two ways, both from a Windows, Mac or Linux computer on the same Wi-Fi as the TV
 | **Time** | About five minutes | About fifteen minutes |
 | **Your dock and hidden apps** | Set on the TV afterwards (Settings → Edit dock) | Built in from the start |
 
+### Family edition: Google TV with profiles
+
+Options A and B disable Google TV's launcher, and Google TV keeps its profiles, the profile switcher and
+Continue Watching inside it. If more than one person uses the TV, follow **[INSTALL-FAMILY.md](INSTALL-FAMILY.md)**
+instead: Google TV stays enabled and stays the default Home, the launcher is installed for every profile, and
+its HomeKeyService opens it on Home (press Home twice for Google TV's home). It adds a "Who's watching?"
+picker that hands over to Google TV's own profile switcher, and a Motion setting (Full / Reduced / Off).
+Nothing is disabled, and `launcher\undo-family.ps1` puts the TV back to stock in one command.
+
 ### Option A: download the APK
 
 **1. Allow the computer on the TV.** Settings → Device Preferences → About → press OK on **Build** seven times.

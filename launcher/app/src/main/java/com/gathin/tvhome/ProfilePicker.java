@@ -189,7 +189,7 @@ final class ProfilePicker {
         });
         if (!in) blurAnimator.addListener(new AnimatorListenerAdapter() {
             @Override public void onAnimationEnd(Animator animation) {
-                blurTarget.setRenderEffect(null);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) blurTarget.setRenderEffect(null);
             }
         });
         blurAnimator.start();

@@ -48,6 +48,8 @@ state = load()
 
 
 def run(command):
+    if "pm list users" in command:
+        return "Users:\n\tUserInfo{0:Josh:c13} running\n\tUserInfo{10:Mom:410} running\n\tUserInfo{11:Alex:410}\n"
     if "pm install" in command:
         return "Success\n"
     if "am start" in command:
@@ -137,7 +139,7 @@ class HandoverTest(unittest.TestCase):
         self.home = self.base / "home"
         self.home.mkdir()
 
-    def handover(self, **overrides):
+    def handover(self, env_extra=None, **overrides):
         state = {
             "stock_home": STOCK_HOME,
             "home": STOCK_HOME,
@@ -153,10 +155,11 @@ class HandoverTest(unittest.TestCase):
         state.update(overrides)
         self.state_path.write_text(json.dumps(state))
         env = {k: v for k, v in os.environ.items()
-               if k not in ("STOCK_LAUNCHER", "INPUT_KEY_SERVICE", "HOME_KEY_SERVICE")}
+               if k not in ("STOCK_LAUNCHER", "INPUT_KEY_SERVICE", "HOME_KEY_SERVICE", "FAMILY_MODE")}
         env.update(TV_HOST="192.168.1.50", FAKE_TV_STATE=str(self.state_path),
                    HOME=str(self.home), JAVA_HOME=str(self.base / "java"),
                    ANDROID_HOME=str(self.base / "android-sdk"))
+        env.update(env_extra or {})
         result = subprocess.run(
             ["bash", str(self.launcher / "build-and-install.sh")],
             cwd=self.launcher, env=env, capture_output=True, text=True, timeout=180,
@@ -169,6 +172,26 @@ class HandoverTest(unittest.TestCase):
         files = list(self.home.glob("cleanyourtv-handover-*.txt"))
         self.assertLessEqual(len(files), 1)
         return files[0].read_text() if files else None
+
+    def test_family_mode_installs_for_every_profile_and_disables_nothing(self):
+        # Google TV with profiles: launcherx keeps the profiles, so it must stay enabled and stay Home.
+        result, state = self.handover(env_extra={"FAMILY_MODE": "1"},
+                                      stock_home="com.google.android.apps.tv.launcherx/.MainActivity",
+                                      home="com.google.android.apps.tv.launcherx/.MainActivity")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        joined = "\n".join(state["commands"])
+        for forbidden in ("disable", "pm hide", "pm uninstall", "set-home-activity", "pm clear"):
+            self.assertNotIn(forbidden, joined)
+        self.assertFalse(state["stock_disabled"])
+        self.assertEqual(state["home"], "com.google.android.apps.tv.launcherx/.MainActivity")
+        for user in ("0", "10", "11"):
+            self.assertIn(f"pm install-existing --user {user} com.gathin.tvhome", joined)
+            self.assertIn(f"settings --user {user} put secure accessibility_enabled 1", joined)
+        # Only HomeKeyService: not the Sleep or Input helpers the normal install turns on.
+        self.assertIn("HomeKeyService", joined)
+        self.assertNotIn("SleepService", joined)
+        self.assertNotIn("InputKeyService", joined)
+        self.assertIsNone(self.record())
 
     def test_success_hands_home_over(self):
         result, state = self.handover()

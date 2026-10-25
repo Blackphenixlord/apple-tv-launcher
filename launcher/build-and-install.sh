@@ -15,6 +15,30 @@ TOOLS="$(cd ../tools && pwd)"   # absolute, so the venv's Python doesn't warn ab
 PY=$TOOLS/venv/bin/python
 [ -x "$PY" ] || PY=$TOOLS/venv/Scripts/python.exe
 export MSYS_NO_PATHCONV=1
+# FAMILY_MODE=1: Google TV with profiles (INSTALL-FAMILY.md). Google TV's launcher keeps every profile's
+# home, switcher and recommendations, so it stays enabled and stays the default Home: this installs the
+# launcher for every Android user (one per profile) and enables only HomeKeyService for each, which opens
+# this launcher on Home. Nothing is disabled and the Home preference is not touched.
+if [ "${FAMILY_MODE:-0}" = 1 ]; then
+  APK=app/build/outputs/apk/release/app-release.apk
+  "$PY" -I ../tools/b64push.py "$APK" /data/local/tmp/tvhome.apk
+  OUT=$("$PY" -I ../tools/tv.py 'pm install -r /data/local/tmp/tvhome.apk; rm -f /data/local/tmp/tvhome.apk')
+  echo "$OUT"
+  case "$OUT" in
+    *Success*) ;;
+    *) echo "ERROR: pm install failed; nothing else was changed." >&2; exit 1 ;;
+  esac
+  USERS=$("$PY" -I ../tools/tv.py 'pm list users' | tr -d '\r' | sed -n 's/.*UserInfo{\([0-9][0-9]*\):.*/\1/p')
+  [ -n "$USERS" ] || { echo "ERROR: pm list users named no users." >&2; exit 1; }
+  SVC=com.gathin.tvhome/.HomeKeyService
+  for u in $USERS; do
+    "$PY" -I ../tools/tv.py "pm install-existing --user $u com.gathin.tvhome"
+    "$PY" -I ../tools/tv.py "s=\$(settings --user $u get secure enabled_accessibility_services); case \"\$s\" in *HomeKeyService*) ;; null|'') settings --user $u put secure enabled_accessibility_services $SVC ;; *) settings --user $u put secure enabled_accessibility_services \"\$s:$SVC\" ;; esac; settings --user $u put secure accessibility_enabled 1; echo HomeKeyService enabled for user $u"
+  done
+  echo "Family mode installed for users: $(echo $USERS). Google TV's launcher is still the default Home."
+  echo "Press Home on the remote to see this launcher; press it twice quickly for Google TV home."
+  exit 0
+fi
 # Which app owns Home differs by build (com.google.android.tvlauncher on Android TV,
 # com.google.android.apps.tv.launcherx on newer Google TV), so ask the TV instead of guessing.
 # Only a launcher we recognise is accepted: the answer can also be Android's chooser ("android"),
