@@ -48,6 +48,8 @@ public class HomeKeyService extends AccessibilityService {
     private List<FamilyProfiles.Profile> profiles = Collections.emptyList();
     /** Google TV's profile chooser is the window in front. */
     private boolean chooserInFront;
+    /** A profile was picked in that chooser; the next Google home that opens is followed by this launcher. */
+    private boolean returnAfterPick;
 
     private static final String TAG = "TvHome.Family";
     /** Held this long, Home opens Google's home as well (a second fallback to the double press). */
@@ -169,6 +171,14 @@ public class HomeKeyService extends AccessibilityService {
         if (cls != null && cls.toString().startsWith(FamilyHome.GOOGLE_HOME_PACKAGE)) {
             chooserInFront = FamilyHome.GOOGLE_PROFILE_CHOOSER.contentEquals(cls);
         }
+        // A profile was just picked in Google's chooser and Google's home opened for it: back to this launcher,
+        // whether it is the default Home or in front of Google's.
+        if (returnAfterPick && FamilyHome.isGoogleHomeWindow(this, pkg, cls)) {
+            returnAfterPick = false;
+            Log.i(TAG, "back to this launcher after the profile switch");
+            FamilyHome.openOwnHome(this);
+            return;
+        }
         if (FamilyHome.googleHomeRequested) return;
         if (!FamilyHome.isGoogleHomeWindow(this, pkg, event.getClassName())) return;
         if (!FamilyHome.isFamilyMode(this) || !FamilyHome.setupComplete(this)) return;
@@ -219,6 +229,7 @@ public class HomeKeyService extends AccessibilityService {
         Log.i(TAG, "profile picked in Google TV's chooser: " + picked.name);
         FamilyHome.setCurrentProfile(this, picked.name);
         FamilyHome.googleHomeRequested = false;
+        returnAfterPick = true;
     }
 
     @Override

@@ -66,6 +66,14 @@ foreach ($id in $ids) {
     Write-Host "  accessibility services: $(Tv "settings --user $id get secure enabled_accessibility_services")"
 }
 
+# Home back to Google TV first (install-family.ps1 -DefaultHome made this launcher the default), so the TV is
+# never left with no Home while this launcher goes away.
+$google = Tv "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME $GoogleHome | tail -n 1"
+foreach ($id in $ids) {
+    if ((Tv "am get-started-user-state $id") -notmatch 'RUNNING') { continue }
+    Write-Host (Tv "cmd package set-home-activity --user $id $google")
+}
+
 # Uninstall for every user at once (this launcher only; it is not a system app).
 $out = Tv "pm uninstall $Pkg"
 Write-Host "Uninstall $Pkg : $out"
@@ -73,7 +81,6 @@ Write-Host "Uninstall $Pkg : $out"
 $homeNow = Tv 'cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -n 1'
 Write-Host "Default Home: $homeNow"
 if ($homeNow -notlike "$GoogleHome/*") {
-    $google = Tv "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME $GoogleHome | tail -n 1"
     Write-Warning "Home resolves to '$homeNow', not Google TV's launcher. Pick Google TV on the TV if it asks, or run: adb shell cmd package set-home-activity $google"
 }
 Tv 'input keyevent KEYCODE_HOME' | Out-Null

@@ -26,11 +26,22 @@ def commands(path):
 
 
 class FamilyInstallTest(unittest.TestCase):
-    def test_install_never_disables_or_changes_home(self):
+    def test_install_never_disables_anything(self):
         text = commands(INSTALL)
-        for forbidden in ("disable-user", "pm disable", "pm hide", "pm uninstall", "pm suspend",
-                          "set-home-activity", "pm clear"):
+        for forbidden in ("disable-user", "pm disable", "pm hide", "pm uninstall", "pm suspend", "pm clear"):
             self.assertNotIn(forbidden, text)
+
+    def test_install_changes_home_only_when_asked(self):
+        # Home changes only behind -DefaultHome: to this launcher, or back to Google TV's if that failed.
+        text = commands(INSTALL)
+        block = text[text.index("if ($DefaultHome) {"):text.index('Write-Host "Default Home: $homeNow"')]
+        self.assertEqual(text.count("set-home-activity"), block.count("set-home-activity"))
+        self.assertIn("set-home-activity --user $($u.Id) $Pkg/.MainActivity", block)
+        self.assertIn("set-home-activity $google", block)
+
+    def test_undo_gives_home_back_before_uninstalling(self):
+        text = commands(UNDO)
+        self.assertLess(text.index("set-home-activity --user $id $google"), text.index("pm uninstall $Pkg"))
 
     def test_install_covers_every_user(self):
         text = commands(INSTALL)

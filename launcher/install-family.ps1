@@ -7,11 +7,15 @@
 #   - installs the APK (pm install-existing --user N for each user)
 #   - enables HomeKeyService only, appended to that user's accessibility services
 #   - writes family.json (the profile names for "Who's watching?") for each running user
-# What it never does: disable, hide or uninstall any package, change the default Home, or start a user.
-# launcherx and the setup wizard stay enabled and launcherx stays the default Home, so Google TV profiles
-# keep working.
+# What it never does: disable, hide or uninstall any package, or start a user. launcherx and the setup wizard
+# stay enabled, so Google TV profiles keep working.
 #
-# Usage:  .\launcher\install-family.ps1 -Serial 192.168.1.50:41234 [-Apk app-release.apk]
+# Home: by default launcherx stays the default Home and HomeKeyService brings this launcher in front of it.
+# -DefaultHome makes this launcher the default Home instead (cmd package set-home-activity): Home and startup
+# go straight to it, with no Google home first; a double press still opens Google's home. launcherx stays
+# installed and enabled; undo-family.ps1 gives Home back to it.
+#
+# Usage:  .\launcher\install-family.ps1 -Serial 192.168.1.50:41234 [-Apk app-release.apk] [-DefaultHome]
 #         [-Profiles 'Riley|#BF360C','Family|#5C6BC0','Sam|#0288D1','Alex|#EC407A']
 #         [-ProfileSwitcher com.google.android.apps.tv.launcherx/.SomeActivity]  (after INSTALL-FAMILY.md step 6)
 #         [-SkipBackup]
@@ -20,6 +24,7 @@ param(
     [string]$Apk = '',
     [string[]]$Profiles = @(),
     [string]$ProfileSwitcher = '',
+    [switch]$DefaultHome,
     [switch]$SkipBackup
 )
 $ErrorActionPreference = 'Stop'
@@ -169,9 +174,27 @@ foreach ($u in $users) {
 Tv 'rm -f /data/local/tmp/tvhome-family.json' | Out-Null
 Tv "cmd package compile -m speed -f $Pkg" | Out-Null
 
+# ---- -DefaultHome: this launcher is Home itself, Google's launcher stays installed and enabled ---------
+$homeQuery = 'cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -n 1'
+if ($DefaultHome) {
+    foreach ($u in $users) {
+        if ((Tv "am get-started-user-state $($u.Id)") -notmatch 'RUNNING') { continue }
+        Write-Host (Tv "cmd package set-home-activity --user $($u.Id) $Pkg/.MainActivity")
+    }
+    $homeNow = Tv $homeQuery
+    if ($homeNow -like "$Pkg/*") {
+        Write-Host "This launcher is now the default Home. Google TV's launcher is still enabled (double-press Home)."
+    } else {
+        # Leave the TV as it was rather than with a half-set Home.
+        $google = Tv "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME $GoogleHome | tail -n 1"
+        Tv "cmd package set-home-activity $google" | Out-Null
+        Write-Warning "Home resolves to '$homeNow', not this launcher; Google TV's home was put back as the default."
+    }
+}
+
 # ---- verify ------------------------------------------------------------------------------------------
-$homeNow = Tv 'cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -n 1'
-Write-Host "Default Home (should still be Google TV's): $homeNow"
+$homeNow = Tv $homeQuery
+Write-Host "Default Home: $homeNow"
 $disabledAfter = Tv 'pm list packages -d'
 if ($disabledAfter -ne $disabledBefore) { Write-Warning 'The disabled-package list changed during the install. This script never disables anything; check what else ran.' }
 else { Write-Host 'No package was disabled.' }

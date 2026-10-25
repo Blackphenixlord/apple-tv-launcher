@@ -659,6 +659,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onNewIntent(intent);
         if (openLauncherSettingsIfAsked(intent)) return;
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
+        // This launcher as the TV's default Home (install-family.ps1 -DefaultHome): Android sends every Home press
+        // here, so a second press within HomePresses.DOUBLE_PRESS_MS opens Google TV's own home. In family mode
+        // HomeKeyService has already decided, and these intents are its own.
+        if (homePresses.isDoublePress(SystemClock.uptimeMillis()) && !FamilyHome.isFamilyMode(this)
+                && FamilyHome.openGoogleHome(this)) {
+            homePresses.reset();
+            return;
+        }
         grid.scrollToPosition(0);
         lastFocused = 0;
         lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
@@ -2602,6 +2610,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private List<FamilyProfiles.Profile> configuredProfiles = Collections.emptyList();
+    /** Home presses while this launcher is the default Home, for the double press to Google TV's home. */
+    private static final HomePresses homePresses = new HomePresses();
 
     /**
      * Who is watching, as far as the launcher can know: the profile last picked in Google TV's chooser, else

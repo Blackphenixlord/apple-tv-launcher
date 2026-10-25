@@ -15,6 +15,15 @@ How Home reaches this launcher:
 - A `BOOT_COMPLETED` receiver does the same at boot. Android only lets a background app open a screen when
   its accessibility service is bound, so both depend on HomeKeyService being on **for that profile**.
 
+**Or make it the real Home (`-DefaultHome`, used on the family TV).** Covering Google's home means Google's
+home shows for a moment first, at startup and on every Home press the accessibility service does not catch.
+With `-DefaultHome` the installer makes this launcher the TV's default Home (`cmd package set-home-activity`):
+Home and startup go straight to it, nothing flashes first, and TCL's startup block does not matter because
+Android itself opens Home. Google TV's launcher stays installed and enabled: **double-press Home** opens it,
+"Who's watching?" still opens its profile chooser, and after a pick this launcher comes back. If a Google TV
+update ever takes Home back, HomeKeyService covers it as above until the installer is run again.
+`undo-family.ps1` gives Home back to Google TV before uninstalling.
+
 Everything else stays Google's: Play Store, your Google account, Chromecast, Google Assistant and voice, Google
 Home controls, the Google TV phone remote, the Settings/Input/app buttons on the remote.
 
@@ -95,7 +104,7 @@ profile; the script also installs into user 10 but does not start it. Name the p
 "Choose an account" screen shows them, with matching colours (example names):
 
 ```powershell
-.\launcher\install-family.ps1 -Serial $tv -Apk $apk -Profiles 'Riley|#BF360C','Family|#5C6BC0','Sam|#0288D1','Alex|#EC407A'
+.\launcher\install-family.ps1 -Serial $tv -Apk $apk -DefaultHome -Profiles 'Riley|#BF360C','Family|#5C6BC0','Sam|#0288D1','Alex|#EC407A'
 ```
 
 On a TV where each profile is its own Android user, leave `-Profiles` out: the names come from `pm list users`.
@@ -107,7 +116,9 @@ setting of every profile, current Home, `restore.json`), then for **each Android
 - appends `com.gathin.tvhome/.HomeKeyService` to that profile's accessibility services (others are kept),
 - writes `family.json` with everyone's names for "Who's watching?".
 
-It finishes by checking that the default Home is still Google TV's and that no package was disabled.
+It finishes by printing the default Home (this launcher with `-DefaultHome`, else still Google TV's) and
+checking that no package was disabled. Leave out `-DefaultHome` to keep Google TV as the default Home and have
+the launcher cover it instead.
 
 The same by hand, if you prefer (`10` is an example user id from `pm list users`):
 
