@@ -107,8 +107,10 @@ final class ProfilePicker {
         column.addView(hint);
 
         View[] items = new View[profiles.size()];
+        int focus = 0;
         for (int i = 0; i < profiles.size(); i++) {
-            items[i] = avatarItem(profiles.get(i), i == 0);
+            items[i] = avatarItem(profiles.get(i), profiles.get(i).current);
+            if (profiles.get(i).current) focus = i;
             row.addView(items[i]);
         }
 
@@ -128,7 +130,7 @@ final class ProfilePicker {
         });
         dialog.setOnDismissListener(d -> clearBlur());
         dialog.show();
-        items[0].requestFocus();
+        items[focus].requestFocus();
         enter(content, items);
     }
 
@@ -264,7 +266,9 @@ final class ProfilePicker {
         }
         if (dialog != null) dialog.dismiss();
         ProfileSwitch.Result r = ProfileSwitch.open(activity, switcherConfig);
-        if (r == ProfileSwitch.Result.GOOGLE_HOME) {
+        if (r == ProfileSwitch.Result.SWITCHER) {
+            Toast.makeText(activity, activity.getString(R.string.profile_choose_name, p.name), Toast.LENGTH_SHORT).show();
+        } else if (r == ProfileSwitch.Result.GOOGLE_HOME) {
             Toast.makeText(activity, activity.getString(R.string.profile_switch_hint, p.name), Toast.LENGTH_LONG).show();
         } else if (r == ProfileSwitch.Result.NOTHING) {
             Toast.makeText(activity, R.string.profile_switch_unavailable, Toast.LENGTH_LONG).show();

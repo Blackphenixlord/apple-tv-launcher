@@ -1,20 +1,24 @@
 # Family edition install for Google TV with profiles (see INSTALL-FAMILY.md). Plain adb, no Android SDK:
 # platform-tools is enough, and the APK can come straight from the GitHub Actions artifact.
 #
-# What it does, for EVERY Android user on the TV (each Google TV profile is one):
+# What it does, for EVERY Android user on the TV (on some builds each Google TV profile is one; on the TCL
+# G08 the profiles are Google accounts inside user 0, and user 10 is an unused leftover):
 #   - backs up the package lists, settings and current Home first (family-backup-<time>\)
-#   - installs the APK (pm install-existing --user N for each profile)
-#   - enables HomeKeyService only, appended to that profile's accessibility services
-#   - writes family.json (the profile names for "Who's watching?")
-# What it never does: disable, hide or uninstall any package, or change the default Home. launcherx and the
-# setup wizard stay enabled and launcherx stays the default Home, so Google TV profiles keep working.
+#   - installs the APK (pm install-existing --user N for each user)
+#   - enables HomeKeyService only, appended to that user's accessibility services
+#   - writes family.json (the profile names for "Who's watching?") for each running user
+# What it never does: disable, hide or uninstall any package, change the default Home, or start a user.
+# launcherx and the setup wizard stay enabled and launcherx stays the default Home, so Google TV profiles
+# keep working.
 #
 # Usage:  .\launcher\install-family.ps1 -Serial 192.168.1.50:41234 [-Apk app-release.apk]
+#         [-Profiles 'Riley|#BF360C','Family|#5C6BC0','Sam|#0288D1','Alex|#EC407A']
 #         [-ProfileSwitcher com.google.android.apps.tv.launcherx/.SomeActivity]  (after INSTALL-FAMILY.md step 6)
 #         [-SkipBackup]
 param(
     [string]$Serial = $env:ANDROID_SERIAL,
     [string]$Apk = '',
+    [string[]]$Profiles = @(),
     [string]$ProfileSwitcher = '',
     [switch]$SkipBackup
 )
@@ -118,7 +122,11 @@ foreach ($u in $users) {
     $entries += "$($u.Id)=$($name -replace '[|]', '/')|$($Palette[$i % $Palette.Count])"
     $i++
 }
-$family = @{ family_profiles = $entries }
+# Google TV profiles that are accounts inside one Android user (the TCL G08: every account in user 0) are not
+# in pm list users at all: -Profiles names them, as Google TV's chooser shows them.
+if ($Profiles.Count -gt 0) { $entries = $Profiles }
+elseif ($users.Count -eq 1) { Write-Warning 'Only one Android user: if Google TV has several profiles here, pass -Profiles with their names (INSTALL-FAMILY.md, step 4).' }
+$family = @{ family_profiles = @($entries) }
 if ($ProfileSwitcher) { $family.profile_switcher = $ProfileSwitcher }
 $json = Join-Path $env:TEMP 'tvhome-family.json'
 [IO.File]::WriteAllText($json, ($family | ConvertTo-Json), (New-Object System.Text.UTF8Encoding $false))
@@ -141,16 +149,19 @@ foreach ($u in $users) {
     Tv "settings --user $id put secure accessibility_enabled 1" | Out-Null
     # The Wi-Fi pill's network name needs location on Android 10+; harmless if refused.
     Tv "pm grant --user $id $Pkg android.permission.ACCESS_FINE_LOCATION" | Out-Null
-    # family.json through the launcher's ThemeProvider (only the adb shell may write it). A profile that is
-    # not running cannot take it: start it in the background for this, and stop it again afterwards.
-    $write = "content write --user $id --uri content://$Pkg.theme/family.json < /data/local/tmp/tvhome-family.json"
-    $res = Tv $write
-    if ($res -match 'Exception|Error|not running') {
-        $started = Tv "am start-user -w $id"
-        $res = Tv $write
-        if ($started -match 'Success') { Tv "am stop-user $id" | Out-Null }
+    # TCL firmware (TclAppBoot) refuses to start an app's services in the background, the accessibility
+    # service included, unless the app has TCL's own AUTO_START op: Settings > Apps > Auto-start, per app.
+    # Without it HomeKeyService stays "enabled" but never binds. Other TVs have no such op; the error is ignored.
+    $auto = Tv "appops set --user $id $Pkg AUTO_START allow"
+    if ($auto -notmatch 'Unknown|Error') { Write-Host '  auto-start allowed (TCL)' }
+    # family.json through the launcher's ThemeProvider (only the adb shell may write it). A user that is not
+    # running cannot take it, and is not started for this; re-run once it has been used.
+    if ((Tv "am get-started-user-state $id") -notmatch 'RUNNING') {
+        Write-Host "  not running: family.json skipped (re-run with -SkipBackup after using this profile)"
+        continue
     }
-    if ($res -match 'Exception|Error|not running') { Write-Warning "  family.json not written for profile $id ($res); its picker shows Android's name only" }
+    $res = Tv "content write --user $id --uri content://$Pkg.theme/family.json < /data/local/tmp/tvhome-family.json"
+    if ($res -match 'Exception|Error') { Write-Warning "  family.json not written for user $id ($res); its picker shows Android's name only" }
     else { Write-Host '  family.json written' }
 }
 Tv 'rm -f /data/local/tmp/tvhome-family.json' | Out-Null

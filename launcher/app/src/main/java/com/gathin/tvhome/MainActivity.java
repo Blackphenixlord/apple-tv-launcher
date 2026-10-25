@@ -685,7 +685,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         promptsPaused = false;
         // Family mode: this launcher is in front again, so Google's home no longer counts as asked for.
-        FamilyHome.googleHomeRequested = false;
+        FamilyHome.launcherResumed();
+        refreshProfileButton();   // a pick in Google TV's chooser may have changed who is watching
         if (rebuildOnResume) {
             tilesReady = false;
             reloadApps(true);
@@ -2593,15 +2594,38 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     private void setUpProfileButton(Config cfg) {
         btnProfile = findViewById(R.id.btnProfile);
-        if (btnProfile == null) return;   // a layout without one (Hebrew)
-        familyProfiles = FamilyProfiles.forPicker(FamilyProfiles.parse(cfg.familyProfiles), FamilyHome.userId(),
-                FamilyHome.systemUserName(this), getString(R.string.profile_default_name));
-        FamilyProfiles.Profile me = familyProfiles.get(0);
-        btnProfile.setText(me.initial());
-        btnProfile.setBackground(ProfilePicker.avatarBackground(me.color, density, 2));
-        btnProfile.setContentDescription(getString(R.string.profile_button, me.name));
+        if (btnProfile == null) return;
+        configuredProfiles = FamilyProfiles.parse(cfg.familyProfiles);
         btnProfile.setOnClickListener(v -> showProfilePicker());
         profilePicker = new ProfilePicker(this, root, motion, cfg.profileSwitcher);
+        refreshProfileButton();
+    }
+
+    private List<FamilyProfiles.Profile> configuredProfiles = Collections.emptyList();
+
+    /**
+     * Who is watching, as far as the launcher can know: the profile last picked in Google TV's chooser, else
+     * Android's name for this user. Unknown: a plain person glyph instead of an initial.
+     */
+    private void refreshProfileButton() {
+        if (btnProfile == null) return;
+        String current = FamilyHome.currentProfile(this);
+        familyProfiles = FamilyProfiles.forPicker(configuredProfiles, FamilyHome.userId(),
+                current != null ? current : FamilyHome.systemUserName(this), getString(R.string.profile_default_name));
+        FamilyProfiles.Profile me = FamilyProfiles.current(familyProfiles);
+        if (me != null) {
+            btnProfile.setText(me.initial());
+            btnProfile.setPaddingRelative(0, 0, 0, 0);
+            btnProfile.setCompoundDrawablesRelative(null, null, null, null);
+            btnProfile.setBackground(ProfilePicker.avatarBackground(me.color, density, 2));
+            btnProfile.setContentDescription(getString(R.string.profile_button, me.name));
+        } else {
+            btnProfile.setText("");
+            btnProfile.setPaddingRelative((int) (10 * density), 0, (int) (10 * density), 0);
+            btnProfile.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_person, 0, 0, 0);
+            btnProfile.setBackground(ProfilePicker.avatarBackground(0x59FFFFFF, density, 2));
+            btnProfile.setContentDescription(getString(R.string.whos_watching));
+        }
     }
 
     private void showProfilePicker() {

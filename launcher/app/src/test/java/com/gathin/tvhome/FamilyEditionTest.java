@@ -147,35 +147,50 @@ public class FamilyEditionTest {
     }
 
     @Test
-    public void pickerPutsTheCurrentProfileFirst() {
+    public void pickerMarksTheProfileOfThisAndroidUser() {
         List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Arrays.asList("0=Josh", "10=Mom", "11=Alex"));
         List<FamilyProfiles.Profile> picker = FamilyProfiles.forPicker(ps, 10, "Ignored", "You");
         assertEquals(3, picker.size());
-        assertEquals("Mom", picker.get(0).name);
-        assertEquals("Josh", picker.get(1).name);
-        assertEquals("Alex", picker.get(2).name);
+        assertEquals("Josh", picker.get(0).name);   // configured order kept
+        assertFalse(picker.get(0).current);
+        assertTrue(picker.get(1).current);
+        assertEquals("Mom", FamilyProfiles.current(picker).name);
     }
 
     @Test
-    public void pickerUsesAndroidsNameWhenTheProfileIsNotConfigured() {
-        List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Arrays.asList("0=Josh", "10=Mom"));
-        List<FamilyProfiles.Profile> picker = FamilyProfiles.forPicker(ps, 12, "Alex", "You");
-        assertEquals(3, picker.size());
-        assertEquals("Alex", picker.get(0).name);
-        assertEquals(12, picker.get(0).userId);
-        // Nothing from Android either: the generic name.
+    public void accountProfilesAreMarkedByTheLastPick() {
+        // The TCL G08: Google TV profiles are accounts inside user 0, so ids are not given.
+        List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Arrays.asList("Riley", "Family", "Sam", "Alex"));
+        List<FamilyProfiles.Profile> picker = FamilyProfiles.forPicker(ps, 0, "sam", "You");
+        assertEquals(4, picker.size());
+        assertEquals("Sam", FamilyProfiles.current(picker).name);
+        // Not known yet (Android only says "Owner"): nothing marked, nobody invented.
+        List<FamilyProfiles.Profile> unknown = FamilyProfiles.forPicker(ps, 0, "Owner", "You");
+        assertEquals(4, unknown.size());
+        assertNull(FamilyProfiles.current(unknown));
+        assertNull(FamilyProfiles.current(FamilyProfiles.forPicker(ps, 0, null, "You")));
+    }
+
+    @Test
+    public void withNothingConfiguredThereIsOneProfileForThisUser() {
+        List<FamilyProfiles.Profile> one = FamilyProfiles.forPicker(Collections.emptyList(), 0, "Alex", "You");
+        assertEquals(1, one.size());
+        assertEquals("Alex", one.get(0).name);
+        assertTrue(one.get(0).current);
         assertEquals("You", FamilyProfiles.forPicker(Collections.emptyList(), 0, null, "You").get(0).name);
         assertEquals("You", FamilyProfiles.forPicker(Collections.emptyList(), 0, "  ", "You").get(0).name);
     }
 
     @Test
-    public void unnumberedEntryMatchingAndroidsNameIsNotListedTwice() {
-        List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Arrays.asList("Josh|#123456", "Mom"));
-        List<FamilyProfiles.Profile> picker = FamilyProfiles.forPicker(ps, 0, "josh", "You");
-        assertEquals(2, picker.size());
-        assertEquals("Josh", picker.get(0).name);
-        assertEquals(0xFF123456, picker.get(0).color);
-        assertEquals("Mom", picker.get(1).name);
+    public void chooserClickTextsMatchWholeNames() {
+        List<FamilyProfiles.Profile> ps = FamilyProfiles.parse(Arrays.asList("Riley", "Family", "Sam", "Alex", "Jo"));
+        assertEquals("Alex", FamilyProfiles.matchText(ps, Collections.singletonList("Alex")).name);
+        assertEquals("Sam", FamilyProfiles.matchText(ps, Arrays.asList(null, "Sam, sam.example@example.com")).name);
+        assertEquals("Jo", FamilyProfiles.matchText(ps, Collections.singletonList("jo")).name);
+        // A name inside another word is not a match ("Family" in "familyaccount").
+        assertNull(FamilyProfiles.matchText(ps, Collections.singletonList("familyaccount@example.com")));
+        assertNull(FamilyProfiles.matchText(ps, Collections.singletonList("Add account")));
+        assertNull(FamilyProfiles.matchText(ps, Collections.emptyList()));
     }
 
     // ---- ProfileSwitch's match on launcherx activity names ----

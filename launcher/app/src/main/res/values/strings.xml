@@ -156,4 +156,5 @@
     <string name="motion_reduced">Reduced</string>
     <string name="motion_off">Off</string>
     <string name="google_home">Google TV home</string>
+    <string name="profile_choose_name">Choose %1$s</string>
 </resources>

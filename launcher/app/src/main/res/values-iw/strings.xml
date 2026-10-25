@@ -151,4 +151,5 @@
     <string name="motion_reduced">מופחתת</string>
     <string name="motion_off">כבויה</string>
     <string name="google_home">מסך הבית של Google TV</string>
+    <string name="profile_choose_name">בחרו את %1$s</string>
 </resources>

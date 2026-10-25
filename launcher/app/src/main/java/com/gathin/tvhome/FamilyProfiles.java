@@ -8,12 +8,15 @@ import java.util.Locale;
 /**
  * The family's Google TV profiles, for the "Who's watching?" picker and the avatar in the top bar.
  *
- * An ordinary app cannot list Android users (that needs MANAGE_USERS), so the names come from config:
- * family_profiles in config.xml or a theme's config.json, one entry per profile:
- * {@code "0=Josh|#FF5E3A"}: the Android user id the profile lives in (pm list users), its name and an
- * avatar colour. The id and the colour are optional. The current profile is the entry whose id matches
- * this process's user; with no match, the name Android reports for the user (where it allows that) is
- * added in front. Plain Java, so it is unit tested.
+ * An ordinary app can neither list Android users (MANAGE_USERS) nor see Google TV's accounts, so the names
+ * come from config: family_profiles in family.json (install-family.ps1), config.xml or a theme's
+ * config.json, one entry per profile: {@code "Alex|#EC407A"}, or {@code "10=Mom|#34C759"} where a
+ * profile is its own Android user (the id from pm list users). The id and the colour are optional.
+ *
+ * Which one is current: on Google TV builds where profiles are Android users, the entry whose id matches
+ * this process's user. Where they are Google accounts inside one user (the TCL G08: all four accounts in
+ * user 0), the profile last picked in Google TV's own chooser, which HomeKeyService notes; until then no
+ * profile is marked. Plain Java, so it is unit tested.
  */
 final class FamilyProfiles {
     private FamilyProfiles() { }
@@ -27,11 +30,18 @@ final class FamilyProfiles {
         final int userId;
         final String name;
         final int color;
+        /** The profile watching now, as far as the launcher knows. */
+        final boolean current;
 
         Profile(int userId, String name, int color) {
+            this(userId, name, color, false);
+        }
+
+        Profile(int userId, String name, int color, boolean current) {
             this.userId = userId;
             this.name = name;
             this.color = color;
+            this.current = current;
         }
 
         /** The letter on the avatar. */
@@ -97,25 +107,50 @@ final class FamilyProfiles {
     }
 
     /**
-     * Who the picker shows, current profile first: the configured one for userId, else one named
-     * systemName (what Android calls this user, may be null), else a generic one. Then everyone else.
+     * Who the picker shows, in the configured order, with the current one marked: the entry configured for
+     * userId, else the entry named currentName (the last pick in Google TV's chooser, or Android's name for
+     * the user; may be null). With nothing configured at all, one profile named currentName (else
+     * fallbackName) for this user. With profiles configured but none known to be current, none is marked.
      */
-    static List<Profile> forPicker(List<Profile> profiles, int userId, String systemName, String fallbackName) {
+    static List<Profile> forPicker(List<Profile> profiles, int userId, String currentName, String fallbackName) {
+        String name = currentName != null && !currentName.trim().isEmpty() ? currentName.trim() : null;
+        if (profiles.isEmpty()) {
+            return Collections.singletonList(new Profile(userId, name != null ? name : fallbackName, PALETTE[0], true));
+        }
+        Profile match = forUser(profiles, userId);
+        if (match == null && name != null) {
+            for (Profile p : profiles) if (p.name.equalsIgnoreCase(name)) match = p;
+        }
         List<Profile> out = new ArrayList<>();
-        Profile current = forUser(profiles, userId);
-        if (current == null) {
-            String name = systemName != null && !systemName.trim().isEmpty() ? systemName.trim() : fallbackName;
-            // An unnumbered entry with the same name is this profile, so it is not listed twice.
-            for (Profile p : profiles) {
-                if (p.userId == UNKNOWN_USER && p.name.equalsIgnoreCase(name)) current = new Profile(userId, p.name, p.color);
-            }
-            if (current == null) current = new Profile(userId, name, PALETTE[profiles.size() % PALETTE.length]);
-        }
-        out.add(current);
-        for (Profile p : profiles) {
-            if (p.userId == current.userId || p.name.equalsIgnoreCase(current.name)) continue;
-            out.add(p);
-        }
+        for (Profile p : profiles) out.add(new Profile(p.userId, p.name, p.color, p == match));
         return out;
+    }
+
+    /** The marked profile, or null. */
+    static Profile current(List<Profile> profiles) {
+        for (Profile p : profiles) if (p.current) return p;
+        return null;
+    }
+
+    /**
+     * The profile a click in Google TV's chooser was on, from the texts the click carried (the avatar's name,
+     * often with the account's address): the longest profile name found as a whole word, or null.
+     */
+    static Profile matchText(List<Profile> profiles, List<CharSequence> texts) {
+        Profile best = null;
+        for (CharSequence t : texts) {
+            if (t == null) continue;
+            String lower = t.toString().toLowerCase(Locale.ROOT);
+            for (Profile p : profiles) {
+                String n = p.name.toLowerCase(Locale.ROOT);
+                int at = lower.indexOf(n);
+                if (at < 0) continue;
+                boolean startOk = at == 0 || !Character.isLetterOrDigit(lower.charAt(at - 1));
+                int end = at + n.length();
+                boolean endOk = end == lower.length() || !Character.isLetterOrDigit(lower.charAt(end));
+                if (startOk && endOk && (best == null || n.length() > best.name.length())) best = p;
+            }
+        }
+        return best;
     }
 }

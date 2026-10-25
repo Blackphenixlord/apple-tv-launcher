@@ -35,14 +35,15 @@ final class ProfileSwitch {
     static Result open(Context ctx, String configured) {
         Intent switcher = switcherIntent(ctx, configured);
         if (switcher != null) {
-            // While Google's switcher is up (and after it closes onto Google's home), family mode leaves it there.
-            FamilyHome.googleHomeRequested = true;
+            // Google's home is not asked for here: once a profile is picked and launcherx shows its home for
+            // it, HomeKeyService brings this launcher back for the new profile. Back from the chooser returns
+            // here directly.
+            FamilyHome.googleHomeRequested = false;
             try {
                 ctx.startActivity(switcher);
                 return Result.SWITCHER;
             } catch (RuntimeException e) {
                 Log.w(TAG, "profile switcher refused: " + switcher, e);
-                FamilyHome.googleHomeRequested = false;
             }
         }
         return FamilyHome.openGoogleHome(ctx) ? Result.GOOGLE_HOME : Result.NOTHING;

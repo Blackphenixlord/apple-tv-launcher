@@ -172,7 +172,8 @@
     <string-array name="family_profiles" translatable="false" />
 
     <!-- Google TV's own profile switcher, as "package/.Activity" or an intent action, for the picker to hand
-         over to. Empty: ProfileSwitch looks for one, and falls back to Google's home with directions. Also
-         settable as "profile_switcher" in family.json or a theme. -->
-    <string name="profile_switcher" translatable="false"></string>
+         over to: launcherx's "Choose an account" screen, exported on the TCL G08 (Android 14, launcherx
+         1.0.994451607). If it stops resolving, ProfileSwitch looks for another, and falls back to Google's home
+         with directions. Also settable as "profile_switcher" in family.json or a theme. -->
+    <string name="profile_switcher" translatable="false">com.google.android.apps.tv.launcherx/.profile.chooser.ProfileChooserActivity</string>
 </resources>

@@ -41,6 +41,22 @@ final class FamilyHome {
     static volatile boolean googleHomeRequested;
     /** When this launcher was last brought to the front by family mode, to ignore the echo of its own start. */
     static volatile long ownHomeStartedAt;
+    /** When Google's home was last asked for. */
+    private static volatile long googleHomeRequestedAt;
+
+    static void requestGoogleHome() {
+        googleHomeRequestedAt = SystemClock.uptimeMillis();
+        googleHomeRequested = true;
+    }
+
+    /**
+     * This launcher is in front again (MainActivity.onResume), so Google's home no longer counts as asked for.
+     * Not within a second of asking: the resume of a first Home press can land after the second press of a
+     * double press, and must not cancel it.
+     */
+    static void launcherResumed() {
+        if (SystemClock.uptimeMillis() - googleHomeRequestedAt > 1000) googleHomeRequested = false;
+    }
 
     /** True when the default Home is something other than this launcher (launcherx, or Android's chooser). */
     static boolean isFamilyMode(Context ctx) {
@@ -106,7 +122,7 @@ final class FamilyHome {
     static boolean openGoogleHome(Context ctx) {
         ComponentName home = googleHome(ctx);
         if (home == null) return false;
-        googleHomeRequested = true;
+        requestGoogleHome();
         Intent i = new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_HOME)
                 .setComponent(home)
@@ -137,6 +153,23 @@ final class FamilyHome {
         } catch (RuntimeException e) {
             return true;
         }
+    }
+
+    /** launcherx's own account/profile chooser (Google TV, "Choose an account"). */
+    static final String GOOGLE_PROFILE_CHOOSER = "com.google.android.apps.tv.launcherx.profile.chooser.ProfileChooserActivity";
+
+    private static final String PREFS = "family", CURRENT_PROFILE = "current_profile";
+
+    /**
+     * The Google TV profile last picked in Google's chooser (HomeKeyService sees the click), or null. On TVs
+     * where profiles are Google accounts inside one Android user, that is the only way an app can know it.
+     */
+    static String currentProfile(Context ctx) {
+        return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CURRENT_PROFILE, null);
+    }
+
+    static void setCurrentProfile(Context ctx, String name) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(CURRENT_PROFILE, name).apply();
     }
 
     /** This process's Android user id (0 for the first profile, 10, 11... for the others). */

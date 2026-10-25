@@ -4,11 +4,14 @@ import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
 import android.os.SystemClock;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -41,7 +44,12 @@ public class HomeKeyService extends AccessibilityService {
     /** Times Google's home was covered recently, so a launcher that keeps coming back cannot start a loop. */
     private final long[] recentReturns = new long[3];
     private int returnIndex;
+    /** The family's profiles (family.json), to recognise a pick in Google TV's chooser. */
+    private List<FamilyProfiles.Profile> profiles = Collections.emptyList();
+    /** Google TV's profile chooser is the window in front. */
+    private boolean chooserInFront;
 
+    private static final String TAG = "TvHome.Family";
     /** Held this long, Home opens Google's home as well (a second fallback to the double press). */
     private static final long LONG_PRESS_MS = 800;
     /** In the first minutes after boot a service with no window information assumes Google's home is showing. */
@@ -56,6 +64,7 @@ public class HomeKeyService extends AccessibilityService {
         settingsKeycodes = config.settingsKeycodes;
         settingsPanel = config.settingsKeyPanel;
         appKeys = RemoteKeys.parseAppKeys(config.appKeys);
+        profiles = FamilyProfiles.parse(config.familyProfiles);
         // Connected at boot, after a switch to this profile, or after an update. Cover Google's home only
         // when it is what is showing; an app in front is left alone.
         if (FamilyHome.isFamilyMode(this) && FamilyHome.setupComplete(this) && googleHomeInFront()) {
@@ -131,6 +140,8 @@ public class HomeKeyService extends AccessibilityService {
         if (event.isCanceled()) return true;
         boolean held = event.getEventTime() - event.getDownTime() >= LONG_PRESS_MS;
         boolean dbl = presses.isDoublePress(event.getDownTime());
+        // One line per press: shows over adb logcat whether the remote's Home reaches this filter at all.
+        Log.i(TAG, "Home key caught" + (dbl ? " (double)" : held ? " (held)" : ""));
         if ((dbl || held) && FamilyHome.openGoogleHome(this)) {
             presses.reset();
             return true;
@@ -146,18 +157,68 @@ public class HomeKeyService extends AccessibilityService {
      */
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
         CharSequence pkg = event.getPackageName();
         if (pkg == null || !FamilyHome.GOOGLE_HOME_PACKAGE.contentEquals(pkg)) return;
+        if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            if (chooserInFront) notePick(event);
+            return;
+        }
+        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
+        CharSequence cls = event.getClassName();
+        // Dialogs and toasts inside launcherx also change window state; only activities move the chooser flag.
+        if (cls != null && cls.toString().startsWith(FamilyHome.GOOGLE_HOME_PACKAGE)) {
+            chooserInFront = FamilyHome.GOOGLE_PROFILE_CHOOSER.contentEquals(cls);
+        }
         if (FamilyHome.googleHomeRequested) return;
         if (!FamilyHome.isGoogleHomeWindow(this, pkg, event.getClassName())) return;
         if (!FamilyHome.isFamilyMode(this) || !FamilyHome.setupComplete(this)) return;
         long now = SystemClock.uptimeMillis();
+        // Google's home again right after this launcher covered it: a second Home press that Android handled
+        // itself (keys injected over adb, and remotes whose Home never reaches the key filter, take this way).
+        // That is the double press: leave Google's home in front.
+        if (lastCoverAt != 0 && now - lastCoverAt <= SECOND_PRESS_MS) {
+            lastCoverAt = 0;
+            Log.i(TAG, "Google's home again right after covering it: double press, leaving it");
+            FamilyHome.requestGoogleHome();
+            return;
+        }
         // Three returns within 10 s: something keeps putting Google's home back. Leave it there.
         if (recentReturns[returnIndex] != 0 && now - recentReturns[returnIndex] < 10_000L) return;
         recentReturns[returnIndex] = now;
         returnIndex = (returnIndex + 1) % recentReturns.length;
+        lastCoverAt = now;
+        Log.i(TAG, "covering Google's home");
         FamilyHome.openOwnHome(this);
+    }
+
+    /** When this launcher last covered Google's home, for the double press Android handled itself. */
+    private long lastCoverAt;
+    /** Google's home back this soon after being covered counts as a second Home press. */
+    private static final long SECOND_PRESS_MS = 700;
+
+    /**
+     * A click in Google TV's "Choose an account" screen: if it names one of the family's profiles, that is who
+     * is watching now (the top bar's avatar), and Google's home that follows the switch is covered again.
+     */
+    private void notePick(AccessibilityEvent event) {
+        List<CharSequence> texts = new ArrayList<>(event.getText());
+        texts.add(event.getContentDescription());
+        AccessibilityNodeInfo node = event.getSource();
+        if (node != null) {
+            texts.add(node.getText());
+            texts.add(node.getContentDescription());
+            for (int i = 0; i < node.getChildCount() && i < 6; i++) {
+                AccessibilityNodeInfo child = node.getChild(i);
+                if (child == null) continue;
+                texts.add(child.getText());
+                texts.add(child.getContentDescription());
+            }
+        }
+        FamilyProfiles.Profile picked = FamilyProfiles.matchText(profiles, texts);
+        if (picked == null) return;   // "Add account", "Manage accounts"
+        Log.i(TAG, "profile picked in Google TV's chooser: " + picked.name);
+        FamilyHome.setCurrentProfile(this, picked.name);
+        FamilyHome.googleHomeRequested = false;
     }
 
     @Override

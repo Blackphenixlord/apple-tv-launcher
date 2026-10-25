@@ -88,9 +88,17 @@ foreach ($u in (adb -s $tv shell pm list users | Select-String 'UserInfo\{(\d+):
 
 ## 4. Install for every profile and enable HomeKeyService (one command)
 
+**On this TV (checked 2026-10-25), Google TV profiles are Google accounts, not Android users.** `pm list users`
+shows `0:Owner` (every Google account on the TV) and `10:new_user`, an Android 12-era
+`com.android.tv.profile` user with no accounts, unused for ~2 years. Installing in user 0 covers every
+profile; the script also installs into user 10 but does not start it. Name the profiles as Google TV's
+"Choose an account" screen shows them, with matching colours (example names):
+
 ```powershell
-.\launcher\install-family.ps1 -Serial $tv -Apk $apk
+.\launcher\install-family.ps1 -Serial $tv -Apk $apk -Profiles 'Riley|#BF360C','Family|#5C6BC0','Sam|#0288D1','Alex|#EC407A'
 ```
+
+On a TV where each profile is its own Android user, leave `-Profiles` out: the names come from `pm list users`.
 
 It prints the profiles it found, writes `family-backup-<time>\` (package lists, disabled list, getprop, every
 setting of every profile, current Home, `restore.json`), then for **each Android user**:
@@ -113,6 +121,15 @@ $cur = adb -s $tv shell settings --user 10 get secure enabled_accessibility_serv
 $new = if ($cur -eq 'null' -or -not $cur) { 'com.gathin.tvhome/.HomeKeyService' } else { "${cur}:com.gathin.tvhome/.HomeKeyService" }
 adb -s $tv shell settings --user 10 put secure enabled_accessibility_services "'$new'"
 adb -s $tv shell settings --user 10 put secure accessibility_enabled 1
+```
+
+**TCL only, and required:** TCL's firmware (`TclAppBoot`) will not start an app's services in the background
+unless the app has TCL's *auto-start* permission. Without it HomeKeyService shows as enabled but never binds
+(`dumpsys accessibility` → `Bound services:{}`, and logcat says `forbid bind service ... OP_AUTO_START`). The
+script allows it for this launcher only; by hand:
+
+```powershell
+adb -s $tv shell appops set --user 0 com.gathin.tvhome AUTO_START allow
 ```
 
 Android 13+ blocks turning on a sideloaded app's accessibility service from the TV's Settings ("Restricted
@@ -149,9 +166,15 @@ catches the physical button):
 
 ## 6. Find Google TV's profile switcher
 
-The picker hands over to Google TV's own switcher; only the system may switch Android users. The launcher
-looks for a launcherx activity whose name says it switches profiles; if none is found it opens Google TV's home
-and tells you to press Up and pick the avatar at the top right. To find the exact screen on your build:
+The picker hands over to Google TV's own switcher; the launcher never switches profiles itself.
+
+**Found on this TV:** `com.google.android.apps.tv.launcherx/.profile.chooser.ProfileChooserActivity` ("Choose an
+account": one avatar per profile, Add account, Manage accounts), `exported=true`, no permission. It is
+the built-in default (`profile_switcher` in config.xml), so nothing needs setting. Picking someone there switches
+Google TV; HomeKeyService notes who was picked (the top bar's avatar) and brings this launcher back.
+
+If a launcherx update renames it, the launcher looks for another launcherx activity whose name says it switches
+profiles, and failing that opens Google TV's home with directions. To find the screen on another build:
 
 ```powershell
 adb -s $tv shell dumpsys package com.google.android.apps.tv.launcherx | Select-String -Pattern 'profile' -CaseSensitive:$false
@@ -226,8 +249,13 @@ Afterwards turn off **Developer options → Wireless debugging** on the TV.
 ## Troubleshooting
 
 - **Home still opens Google TV.** `dumpsys accessibility` must list HomeKeyService under *Bound services* for
-  the profile on screen. Re-run step 4 for that profile. A force-stop of the launcher unbinds it until reboot
-  or re-enable.
+  the profile on screen. On TCL, check `adb shell appops get com.gathin.tvhome AUTO_START` says `allow`. A
+  force-stop of the launcher unbinds it until reboot or until the service is re-enabled:
+  `adb shell settings put secure enabled_accessibility_services null`, then step 4 again.
+- **Testing over adb:** `input keyevent KEYCODE_HOME` is injected after the accessibility key filter, so Android
+  handles it and opens Google's home; the launcher then covers it (the same path as boot). Two quick injected
+  Home presses still leave Google's home up (the second one comes back within 700 ms of the cover). Only the
+  real remote shows whether its Home button reaches HomeKeyService directly.
 - **"Who's watching?" only opens Google TV home.** No switcher activity was found or allowed; that is the
   documented fallback. See step 6.
 - **A profile shows "You" instead of its name.** `family.json` could not be written for it (the profile was not
